@@ -25,11 +25,29 @@ dd2 <- get_all_survey_sets(species_list[16:length(species_list)],
 
 saveRDS(dd2, "data-raw/survey-sets-all-2.rds")
 
-ds <- get_all_survey_samples(species_list,
+ds <- get_all_survey_samples(species_list[1:8],
                              include_event_info = TRUE,
                              unsorted_only = FALSE,
                              random_only = FALSE,
                              grouping_only = FALSE,
                              remove_bad_data = TRUE,
                              remove_duplicates = TRUE)
-saveRDS(ds, "data-raw/survey-samples-all.rds")
+saveRDS(ds, "data-raw/survey-samples-all-1a.rds")
+
+ds <- get_all_survey_samples(species_list[9:15],
+                             include_event_info = TRUE,
+                             unsorted_only = FALSE,
+                             random_only = FALSE,
+                             grouping_only = FALSE,
+                             remove_bad_data = TRUE,
+                             remove_duplicates = TRUE)
+saveRDS(ds, "data-raw/survey-samples-all-1b.rds")
+
+ds <- get_all_survey_samples(species_list[16:length(species_list)],
+                             include_event_info = TRUE,
+                             unsorted_only = FALSE,
+                             random_only = FALSE,
+                             grouping_only = FALSE,
+                             remove_bad_data = TRUE,
+                             remove_duplicates = TRUE)
+saveRDS(ds, "data-raw/survey-samples-all-1c.rds")
