@@ -1,66 +1,67 @@
 # retrieve and clean up data
 
-# need to be on PBS network ----
-
-remotes::install_github("pbs-assess/gfdata", ref = "trials")
-library(gfdata)
-
 # # load overall species list
 source("analysis/00-species-list.R")
 
 ## all canadian waters
-major_areas <- c("01", "03", "04", "05", "06", "07", "08", "09", "11",
+major_areas <- c("01", "03", "04", "05", "06", "07", "08", "09",
+                 "11", # bc offshore waters
                  "71","72","73","74","75","76","77","99")
 
 
-dd <- get_all_survey_sets(species_list[1:15],
-                          ssid = NULL,
-                          major = major_areas,
-                          remove_duplicates = TRUE,
-                          usability = NULL)
-
-saveRDS(dd, "data-raw/survey-sets-all-1.rds")
-
-dd2 <- get_all_survey_sets(species_list[16:length(species_list)],
-                           ssid = NULL,
-                           major = major_areas,
-                           remove_duplicates = TRUE,
-                           usability = NULL)
-
-saveRDS(dd2, "data-raw/survey-sets-all-2.rds")
-
-ds <- get_all_survey_samples(species_list[1:8],
-                             ssid = NULL,
-                             major = major_areas,
-                             include_event_info = TRUE,
-                             unsorted_only = FALSE,
-                             random_only = FALSE,
-                             grouping_only = FALSE,
-                             remove_bad_data = TRUE,
-                             remove_duplicates = TRUE)
-saveRDS(ds, "data-raw/survey-samples-all-1a.rds")
-
-ds1 <- get_all_survey_samples(species_list[9:15],
-                              ssid = NULL,
-                              major = major_areas,
-                             include_event_info = TRUE,
-                             unsorted_only = FALSE,
-                             random_only = FALSE,
-                             grouping_only = FALSE,
-                             remove_bad_data = TRUE,
-                             remove_duplicates = TRUE)
-saveRDS(ds1, "data-raw/survey-samples-all-1b.rds")
-
-ds2 <- get_all_survey_samples(species_list[16:length(species_list)],
-                              ssid = NULL,
-                              major = major_areas,
-                              include_event_info = TRUE,
-                              unsorted_only = FALSE,
-                              random_only = FALSE,
-                              grouping_only = FALSE,
-                              remove_bad_data = TRUE,
-                              remove_duplicates = TRUE)
-saveRDS(ds2, "data-raw/survey-samples-all-2.rds")
+# # need to be on PBS network ----
+#
+# remotes::install_github("pbs-assess/gfdata", ref = "trials")
+# library(gfdata)
+#
+# dd <- get_all_survey_sets(species_list[1:15],
+#                           ssid = NULL,
+#                           major = major_areas,
+#                           remove_duplicates = TRUE,
+#                           usability = NULL)
+#
+# saveRDS(dd, "data-raw/survey-sets-all-1.rds")
+#
+# dd2 <- get_all_survey_sets(species_list[16:length(species_list)],
+#                            ssid = NULL,
+#                            major = major_areas,
+#                            remove_duplicates = TRUE,
+#                            usability = NULL)
+#
+# saveRDS(dd2, "data-raw/survey-sets-all-2.rds")
+#
+# ds <- get_all_survey_samples(species_list[1:8],
+#                              ssid = NULL,
+#                              major = major_areas,
+#                              include_event_info = TRUE,
+#                              unsorted_only = FALSE,
+#                              random_only = FALSE,
+#                              grouping_only = FALSE,
+#                              remove_bad_data = TRUE,
+#                              remove_duplicates = TRUE)
+# saveRDS(ds, "data-raw/survey-samples-all-1a.rds")
+#
+# ds1 <- get_all_survey_samples(species_list[9:15],
+#                               ssid = NULL,
+#                               major = major_areas,
+#                              include_event_info = TRUE,
+#                              unsorted_only = FALSE,
+#                              random_only = FALSE,
+#                              grouping_only = FALSE,
+#                              remove_bad_data = TRUE,
+#                              remove_duplicates = TRUE)
+# saveRDS(ds1, "data-raw/survey-samples-all-1b.rds")
+#
+# ds2 <- get_all_survey_samples(species_list[16:length(species_list)],
+#                               ssid = NULL,
+#                               major = major_areas,
+#                               include_event_info = TRUE,
+#                               unsorted_only = FALSE,
+#                               random_only = FALSE,
+#                               grouping_only = FALSE,
+#                               remove_bad_data = TRUE,
+#                               remove_duplicates = TRUE)
+# saveRDS(ds2, "data-raw/survey-samples-all-1c.rds")
 
 # Reminder can be completed off network ----
 
@@ -92,13 +93,12 @@ iphc <- iphc |> mutate(
     sex == "M"~1,
     TRUE ~ 0
   ),
-  maturity_convention_code = 4,
   maturity_code = case_when(
     maturity == "Resting"~7,
     maturity == "Immature"~1,
     maturity == "Mature"~3,
     maturity == "Spawning"~4,
-    TRUE ~ 0
+    TRUE ~ NA
   ),
   length = `length (cm)`,
   weight = `net weight (kg)`*1000,
@@ -109,7 +109,6 @@ iphc <- iphc |> mutate(
 ) |> select(year,month,day,
             fishing_event_id, sample_id, specimen_id,
   sex,
-  maturity_convention_code,
   maturity_code,
   length,
   weight,
@@ -118,9 +117,13 @@ iphc <- iphc |> mutate(
   latitude_end,
   longitude_end
 ) |> mutate(
+length_type = "fork_length",
+maturity_convention_code = 4,
+maturity_convention_maxvalue = 7,
 survey_abbrev = "IPHC FISS",
 survey_series_id = 14,
-survey_id = 66,
+survey_id = NA,
+major_stat_area_code = "11",
 species_code = "614",
 species_common_name = "pacific halibut"
 )
@@ -135,7 +138,7 @@ surveys_included <- c("HBLL OUT N", "HBLL OUT S",
                       "OTHER", # filtered to two older bottom trawl surveys + hake
                       "HS MSA", "SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI")
 
-
+## combine all set data ----
 dset <- readRDS("data-raw/survey-sets-all-1.rds") %>%
   bind_rows(., readRDS("data-raw/survey-sets-all-2.rds")) %>%
   # this removes duplications and non-Canadian data
@@ -161,10 +164,12 @@ dset <- readRDS("data-raw/survey-sets-all-1.rds") %>%
       ))
   ) %>% distinct()
 
+
+# combine all sample data ----
 dsamp <- readRDS("data-raw/survey-samples-all-1a.rds") %>%
   bind_rows(., readRDS("data-raw/survey-samples-all-1b.rds")) %>%
-  # bind_rows(., readRDS("data-raw/survey-samples-all-2.rds")) %>%
-  bind_rows(., iphc) %>%
+  bind_rows(., readRDS("data-raw/survey-samples-all-1c.rds")) %>%
+  bind_rows(., filter(iphc, !is.na(specimen_id))) %>%
   filter(survey_abbrev %in% surveys_included,
          !(survey_abbrev == "OTHER" & !(survey_series_id %in% c(9, 11, 68))),
          major_stat_area_code %in% major_areas) %>%
@@ -185,7 +190,7 @@ dsamp <- readRDS("data-raw/survey-samples-all-1a.rds") %>%
   # select(-dna_container_id, -dna_sample_type) %>%
   distinct()
 
-# remove misidentified sandpaper skates from set data
+# remove misidentified sandpaper skates from set data ----
 dset <- dset %>% filter(!(species_common_name == tolower("Sandpaper Skate")
     & fishing_event_id %in% c(filter(dsamp, species_common_name == tolower("Sandpaper Skate")&length > 70)$fishing_event_id)))
 
@@ -193,7 +198,7 @@ dset <- dset %>% filter(!(species_common_name == tolower("Sandpaper Skate")
 dsamp <- dsamp %>% filter(!(species_common_name == tolower("Sandpaper Skate")&length > 70))
 
 
-# temporary fix for doorspread issue
+# temporary fix for doorspread issue ----
 dsamp <- dsamp |>
   select(-area_swept1, -area_swept2, -area_swept, -area_swept_km2) |>
   group_by(specimen_id) |>
@@ -214,8 +219,8 @@ try(.d[ ((.d$survey_series_id == 6)), ]$survey_abbrev <- "MSSM QCS", silent = TR
 dsamp <- .d |> dplyr::distinct()
 
 # save combined processed data
-saveRDS(dset, "data-generated/all-sets-used.rds")
 saveRDS(dsamp, "data-generated/all-samples-used.rds")
+saveRDS(dset, "data-generated/all-sets-used.rds")
 
 check_for_duplicates <- dsamp[duplicated(dsamp$specimen_id), ]
 filter(dsamp, specimen_id %in% check_for_duplicates$specimen_id) |> View()
@@ -225,11 +230,17 @@ unique(check_for_duplicates$survey_series_desc)
 dd <- filter(dsamp, specimen_id == 8382976)
 
 
-dset |> group_by(species_common_name, survey_series_id) |> summarise(n = n(),
-                                                   events = length(unique(paste0(fishing_event_id, skate_id)))) |> View()
+dsamp |> group_by(species_common_name, survey_series_id) |>
+  summarise(n = n(),
+            specimens = length(unique(paste0(specimen_id)))) |> View()
+
+dset |> group_by(species_common_name, survey_series_id) |>
+  summarise(n = n(),
+            events = length(unique(paste0(fishing_event_id, skate_id)))) |> View()
 ### check which species are measured by IPHC
 ### just figured out how to add halibut data direct from IPHC ... halibut should be rerun
-d <- dsamp |> filter(survey_abbrev == "IPHC FISS", !is.na(length)) |>
+d <- dsamp |> filter(!is.na(length), survey_abbrev == "IPHC FISS") |>
+  # filter(species_common_name == "pacific halibut") |>
   mutate(DOY = as.numeric(strftime(time_deployed, format = "%j")))
 d |> group_by(species_common_name) |> summarise(min = min(year),max = max(year))
 
