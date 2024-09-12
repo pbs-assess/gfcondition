@@ -105,9 +105,13 @@ iphc <- iphc |> mutate(
   latitude = beginlat,
   longitude = beginlon,
   latitude_end = endlat,
-  longitude_end = endlon
-) |> select(year,month,day,
-            fishing_event_id, sample_id, specimen_id,
+  longitude_end = endlon,
+  depth_m = `avgdepth (fm)`,
+  log_depth = log(depth_m),
+  time_deployed = as.POSIXct(paste0(year, "-", month, "-", day, " 12:00"))
+) |> select(
+  year,month,day,
+  fishing_event_id, sample_id, specimen_id,
   sex,
   maturity_code,
   length,
@@ -115,7 +119,10 @@ iphc <- iphc |> mutate(
   latitude,
   longitude,
   latitude_end,
-  longitude_end
+  longitude_end,
+  depth_m,
+  log_depth,
+  time_deployed
 ) |> mutate(
 length_type = "fork_length",
 maturity_convention_code = 4,
