@@ -23,23 +23,25 @@ dir.create(paste0("data-generated/density-index/"), showWarnings = FALSE)
 # load overall species list
 source("analysis/00-species-list.R")
 
-# # # or override with custom subset
-# species_list <- list(
-#   # "Dover Sole",#
-# # "Rex Sole", #
-# # "Flathead Sole",#
-# # "Southern Rock Sole",#
-# # "Slender Sole",#
-# # "Pacific Sanddab",#
-# "Pacific Halibut"#
-# # "Butter Sole",
-# # "Pacific Hake",#
-# # # "Pacific Tomcod",
-# # "Spotted Ratfish",
-# # "Longnose Skate",
-# # "Big Skate",
-# # "Sandpaper Skate"
-# )
+# # # # or override with custom subset
+species_list <- list(
+#   "Lingcod"
+"Pacific Cod"
+# #   # "Dover Sole",#
+# # # "Rex Sole", #
+# # # "Flathead Sole",#
+# # # "Southern Rock Sole",#
+# # # "Slender Sole",#
+# # # "Pacific Sanddab",#
+# # "Pacific Halibut"#
+# # # "Butter Sole",
+# # # "Pacific Hake",#
+# # # # "Pacific Tomcod",
+# # # "Spotted Ratfish",
+# # # "Longnose Skate",
+# # # "Big Skate",
+# # # "Sandpaper Skate"
+)
 
 species_list <- list(species = species_list)
 
@@ -54,8 +56,8 @@ fit_all_distribution_models <- function(species) {
   stop_early <- FALSE
 
   ## this only affects maturity specific models
-  # only_sampled <- FALSE
-  only_sampled <- TRUE
+  only_sampled <- FALSE
+  # only_sampled <- TRUE. ## need to reun for halibut and pcod only
 
   options(scipen = 100, digits = 4)
   theme_set(theme_sleek())
@@ -88,7 +90,8 @@ fit_all_distribution_models <- function(species) {
   # using 6 sample cutoff for splits though function default is 10
   # old figures with "shrunk" in name have a bug in the split function such that sets without sampled females got the average rather than true proportions
 
-  dens_model_name0 <- "dln-all-"
+  # dens_model_name0 <- "dln-all-"
+  dens_model_name0 <- "dln-ss5-"
 
   if(only_sampled) {
     dens_model_name <- "dln-only-sampled-"
@@ -111,6 +114,8 @@ fit_all_distribution_models <- function(species) {
   # subset of surveys used for density models
   surveys_included <- c(
     "HS MSA",
+    "HS PCOD",
+    "THORNYHEAD",
     "SYN HS", "SYN QCS",
     "SYN WCHG", "SYN WCVI",
     "MSSM QCS", "MSSM WCVI", # already filtered to avoid duplication
