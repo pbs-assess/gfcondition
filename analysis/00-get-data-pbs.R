@@ -148,7 +148,6 @@ surveys_included <- c("HBLL OUT N", "HBLL OUT S",
 ## combine all set data ----
 dset <- readRDS("data-raw/survey-sets-all-1.rds") %>%
   bind_rows(., readRDS("data-raw/survey-sets-all-2.rds")) %>%
-  # this removes duplications and non-Canadian data
   filter(survey_abbrev %in% surveys_included,
          !(survey_abbrev == "OTHER" & !(survey_series_id %in% c(5, 9, 11, 68))),
          major_stat_area_code %in% major_areas) %>%
@@ -342,42 +341,39 @@ filter(dset, species_common_name == "pacific cod", year >= 2000 ,
     survey_type = ifelse(survey_abbrev %in% c("MSSM WCVI", "MSSM QCS"), "MSSM", as.character(survey_type)),
     survey_type = ifelse(survey_type %in% c("SYN"), "SYNOPTIC", as.character(survey_type))
     ) |>
-  ggplot(aes(longitude, latitude,
-             # size = log(area_swept),
-             # alpha = log(area_swept)),
-             shape = survey_type,
-         colour = survey_type
-         )) +
+  ggplot() +
   scale_colour_brewer(palette = "Paired") +
   labs(colour = "Survey",
        shape = "Survey",
        x = "Longitude",
        y = "Latitude") +
-  geom_point(alpha = 0.95, size = 1) + facet_wrap(~year) +
+  geom_point(aes(longitude, latitude,
+                 shape = survey_type,
+                 colour = survey_type
+  ), alpha = 0.95, size = 1) +
+  facet_wrap(~year) +
+  geom_sf(data = bc_coast, fill= "grey85", colour = NA)  +
+  coord_sf(xlim = range(dset$longitude, na.rm = TRUE), ylim = range(dset$latitude, na.rm = TRUE), expand = FALSE) +
   ggsidekick::theme_sleek()
 
 ggsave("figs/man/supp-map-surveys-trawl.pdf", width = 10, height = 10)
 
 
 filter(dset, species_common_name == "pacific cod", year >= 2000,
-       # year <2006,
        survey_type %in% c("HBLL","SABLE","IPHC FISS")) |>
-  # mutate(
-  #   survey_type = ifelse(survey_abbrev %in% c("MSSM WCVI", "MSSM QCS"), "MSSM", as.character(survey_type)),
-  #   survey_type = ifelse(survey_type %in% c("SYN"), "SYNOPTIC", as.character(survey_type))
-  # ) |>
-  ggplot(aes(longitude, latitude,
-             # size = log(area_swept),
-             # alpha = log(area_swept)),
-             shape = survey_type,
-             colour = survey_type
-  )) +
+  ggplot() +
   scale_colour_brewer(palette = "Paired") +
   labs(colour = "Survey",
        shape = "Survey",
        x = "Longitude",
        y = "Latitude") +
-  geom_point(alpha = 0.95, size = 1) + facet_wrap(~year) +
+  geom_point(aes(longitude, latitude,
+                 shape = survey_type,
+                 colour = survey_type),
+             alpha = 0.95, size = 1) + facet_wrap(~year) +
+  geom_sf(data = bc_coast, fill= "grey85", colour = NA)  +
+  coord_sf(xlim = range(dset$longitude, na.rm = TRUE),
+           ylim = range(dset$latitude, na.rm = TRUE), expand = FALSE) +
   ggsidekick::theme_sleek()
 
 ggsave("figs/man/supp-map-surveys-ll.pdf", width = 10, height = 10)
