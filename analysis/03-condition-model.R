@@ -9,30 +9,30 @@ devtools::load_all(".")
 source("analysis/00-species-list.R")
 #
 # # # or override with custom subset
-species_list <- list(
-# # "North Pacific Spiny Dogfish",
-# # "Pacific Ocean Perch",
-# # "Pacific Cod",
-# # "Walleye Pollock",
-# # "Sablefish",
-# # "Lingcod",
-# "Bocaccio"
-# # "Canary Rockfish",
-# # "Quillback Rockfish",
-# # "Redbanded Rockfish",
-# # "Redstripe Rockfish", #
-# # "Rougheye/Blackspotted Rockfish Complex", #
-# # "Silvergray Rockfish", #
-# # "Shortspine Thornyhead",
-# # "Widow Rockfish", #
-# # "Yelloweye Rockfish",
-# # "Yellowmouth Rockfish", #
-# # "Yellowtail Rockfish",
-# "Shortraker Rockfish"
-# # "Rosethorn Rockfish",
-# # "Harlequin Rockfish",
-# # "Pygmy Rockfish",
-# # "Sharpchin Rockfish",
+# species_list <- list(
+# "North Pacific Spiny Dogfish",
+# "Pacific Ocean Perch",
+# "Pacific Cod",
+# "Walleye Pollock",
+# "Sablefish",
+# "Lingcod",
+# "Bocaccio",
+# "Canary Rockfish",
+# "Quillback Rockfish",
+# "Redbanded Rockfish",
+# "Redstripe Rockfish", #
+# "Rougheye/Blackspotted Rockfish Complex", #
+# "Silvergray Rockfish", #
+# "Shortspine Thornyhead",
+# "Widow Rockfish", #
+# "Yelloweye Rockfish",
+# "Yellowmouth Rockfish", #
+# "Yellowtail Rockfish",
+# # "Shortraker Rockfish"
+# "Rosethorn Rockfish",
+# # # # "Harlequin Rockfish",
+# # # # "Pygmy Rockfish",
+# "Sharpchin Rockfish"
 # # "Darkblotched Rockfish",
 # # "Greenstriped Rockfish",
 # # "Petrale Sole", #
@@ -52,7 +52,7 @@ species_list <- list(
 # # "Longnose Skate",
 # # "Big Skate",
 # # "Sandpaper Skate"
-)
+# )
 
 index_list <- expand.grid(species = species_list,
                           maturity = c(
@@ -82,8 +82,8 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   # males <- FALSE
   # females <- TRUE
 
-  # stop_early <- TRUE
-  stop_early <- FALSE
+  stop_early <- TRUE
+  # stop_early <- FALSE
 
   # add_density <- FALSE
   # add_density <- TRUE
@@ -219,9 +219,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   }
 
 
-  if(stop_early) {
-    return(itest)
-  }
+
 
   # Load condition data and attach lagged density estimates ----
   dir.create(paste0("data-generated/condition-data-w-dens/"),
@@ -610,16 +608,30 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   hist(d$cond_fac)
   hist(log(d$cond_fac))
 
+  d <- d %>% filter(year >= min(gridA$year))
+
   sg <- d %>%
     group_by(survey_group) %>%
     summarise(n = n()) |>
-    mutate(survey_group = fct_reorder(survey_group, .x = n, .desc = TRUE))
+    filter(n > 30) |>
+    mutate(
+      species = species,
+      group = group_label,
+      survey_group = fct_reorder(droplevels(survey_group), .x = n, .fun = sum, .desc = TRUE))
+
+
+  dir.create(paste0("data-generated/specimen-counts/"), showWarnings = FALSE)
+  saveRDS(sg, paste0("data-generated/specimen-counts/", spp, "-", group_tag, ".rds"))
+
+  if(stop_early) {
+    return(itest)
+  }
+
+  d <- d %>% filter(survey_group %in% unique(sg$survey_group))
 
   d$survey_group <- factor(d$survey_group, levels = levels(sg$survey_group))
 
-# browser()
-
-  d <- d %>% filter(year >= min(gridA$year))
+  # browser()
 
   mesh <- make_mesh(d, c("X", "Y"), cutoff = knot_distance)
 
