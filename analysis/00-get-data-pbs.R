@@ -150,16 +150,19 @@ dset <- readRDS("data-raw/survey-sets-all-1.rds") %>%
   bind_rows(., readRDS("data-raw/survey-sets-all-2.rds")) %>%
   # this removes duplications and non-Canadian data
   filter(survey_abbrev %in% surveys_included,
-         !(survey_abbrev == "OTHER" & !(survey_series_id %in% c(9, 11, 68))),
+         !(survey_abbrev == "OTHER" & !(survey_series_id %in% c(5, 9, 11, 68))),
          major_stat_area_code %in% major_areas) %>%
   mutate(
     survey_abbrev = ifelse(survey_series_id == 68, "HAKE", survey_abbrev),
+    survey_abbrev = ifelse(survey_series_id == 5, "HS PCOD", survey_abbrev),
+    survey_abbrev = ifelse(survey_series_id == 11, "THORNYHEAD", survey_abbrev),
     # survey_area = ifelse(survey_abbrev == "HS MSA", "SYN HS",
     #                 ifelse(survey_abbrev == "MSSM QCS", "SYN QCS",
     #                 ifelse(survey_abbrev == "MSSM WCVI", "SYN WCVI",
     #                 survey_abbrev))),
     survey_type = as.factor(
       case_when(
+        survey_abbrev %in% c("HBLL OUT S", "HBLL OUT N")~"HBLL",
         survey_abbrev == "HS MSA"~"MSA",
         survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year>2002 & year<=2005~"MSSM<=05",
         survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year>2005~"MSSM>05",
@@ -178,17 +181,20 @@ dsamp <- readRDS("data-raw/survey-samples-all-1a.rds") %>%
   bind_rows(., readRDS("data-raw/survey-samples-all-1c.rds")) %>%
   bind_rows(., filter(iphc, !is.na(specimen_id))) %>%
   filter(survey_abbrev %in% surveys_included,
-         !(survey_abbrev == "OTHER" & !(survey_series_id %in% c(9, 11, 68))),
+         !(survey_abbrev == "OTHER" & !(survey_series_id %in% c(5, 9, 11, 68))),
          major_stat_area_code %in% major_areas) %>%
   mutate(
     survey_abbrev = ifelse(survey_series_id == 68, "HAKE", survey_abbrev),
+    survey_abbrev = ifelse(survey_series_id == 5, "HS PCOD", survey_abbrev),
+    survey_abbrev = ifelse(survey_series_id == 11, "THORNYHEAD", survey_abbrev),
     survey_type = as.factor(
       case_when(
+        survey_abbrev %in% c("HBLL OUT S", "HBLL OUT N")~"HBLL",
         survey_abbrev == "HS MSA"~"MSA",
         survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year>2002 & year<=2005~"MSSM<=05",
         survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year>2005~"MSSM>05",
         survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year <= 2002~"MSSM <03",
-        survey_series_id == 68~"HAKE",
+        # survey_series_id == 68~"HAKE",
         survey_abbrev %in% c("SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI")~"SYN",
         survey_abbrev %in% c("EUL N", "EUL S")~"EUL",
         TRUE~survey_abbrev
@@ -228,6 +234,11 @@ dsamp <- .d |> dplyr::distinct()
 # save combined processed data
 saveRDS(dsamp, "data-generated/all-samples-used.rds")
 saveRDS(dset, "data-generated/all-sets-used.rds")
+
+
+dsamp <- readRDS("data-generated/all-samples-used.rds")
+dset <- readRDS("data-generated/all-sets-used.rds")
+
 
 check_for_duplicates <- dsamp[duplicated(dsamp$specimen_id), ]
 filter(dsamp, specimen_id %in% check_for_duplicates$specimen_id) |> View()
@@ -277,21 +288,96 @@ d <- dsamp |> filter(survey_abbrev %in% c("SABLE", "SABLE INLET",
 d |> group_by(species_common_name) |> summarise(min = min(year),max = max(year)) |> View()
 
 d2 <- filter(d, maturity_code>0)
-d2 |> group_by(species_common_name) |> summarise(min = min(year),max = max(year), n = n()) |> View()
+d2 |> group_by(species_common_name) |> summarise(min = min(year, na.rm = TRUE),max = max(year, na.rm = TRUE), n = n()) #|> View()
 
 d2 <- filter(d, !is.na(weight), !is.na(length))
-d2 |> group_by(species_common_name) |> summarise(min = min(year),max = max(year), n = n())|> View()
+d2 |> group_by(species_common_name) |>
+  summarise(min = min(year),max = max(year), n = n()) #|> View()
 
 
 ### check which species are measured by HAKE
-### discovered all samples since 2018 are missing... should get these and rerun everything!
 d <- dsamp |> filter(survey_abbrev %in% c("HAKE"), !is.na(length)) |>
   mutate(DOY = as.numeric(strftime(time_deployed, format = "%j")))
 
-d |> group_by(species_common_name) |> summarise(min = min(year),max = max(year)) |> View()
+# d |> group_by(species_common_name) |> summarise(min = min(year),max = max(year)) |> View()
 
 d2 <- filter(d, maturity_code>0)
-d2 |> group_by(species_common_name) |> summarise(min = min(year),max = max(year), n = n()) |> View()
+d2 |> group_by(species_common_name) |>
+  summarise(min = min(year),max = max(year), n = n()) #|> View()
 
 d2 <- filter(d, !is.na(weight), !is.na(length))
-d2 |> group_by(species_common_name) |> summarise(min = min(year),max = max(year), n = n())|> View()
+d2 |> group_by(species_common_name) |>
+  summarise(min = min(year),max = max(year), n = n()) |> View()
+
+### check which species are measured by HS PCOD
+d <- dsamp |> filter(#!is.na(length),
+                     survey_abbrev %in% c("HS PCOD")) |>
+  mutate(DOY = as.numeric(strftime(time_deployed, format = "%j")))
+
+# d |> group_by(species_common_name) |> summarise(min = min(year),max = max(year)) |> View()
+
+d2 <- filter(d, maturity_code>0)
+d2 |> group_by(species_common_name) |>
+  summarise(min = min(year),max = max(year), n = n()) #|> View()
+
+d2 <- filter(d, !is.na(weight), !is.na(length))
+d2 |> group_by(species_common_name) |>
+  summarise(min = min(year),max = max(year), n = n()) #|> View()
+
+d <- dset |> filter(survey_abbrev %in% c("HS PCOD"))
+d |> group_by(species_common_name) |>
+  summarise(sum = sum(catch_weight, na.rm = TRUE), n = n()) |> View()
+
+d |> ggplot(aes(longitude, latitude, colour = as.factor(year),
+                # size = log(catch_weight),
+                alpha = log(catch_weight))) +
+  geom_point() + facet_wrap(~species_common_name)
+
+filter(dset, species_common_name == "pacific cod", year >= 2000 ,
+       # year <2006,
+       survey_type != "HBLL",
+       survey_type != "SABLE",
+       survey_type != "IPHC FISS") |>
+  mutate(
+    survey_type = ifelse(survey_abbrev %in% c("MSSM WCVI", "MSSM QCS"), "MSSM", as.character(survey_type)),
+    survey_type = ifelse(survey_type %in% c("SYN"), "SYNOPTIC", as.character(survey_type))
+    ) |>
+  ggplot(aes(longitude, latitude,
+             # size = log(area_swept),
+             # alpha = log(area_swept)),
+             shape = survey_type,
+         colour = survey_type
+         )) +
+  scale_colour_brewer(palette = "Paired") +
+  labs(colour = "Survey",
+       shape = "Survey",
+       x = "Longitude",
+       y = "Latitude") +
+  geom_point(alpha = 0.95, size = 1) + facet_wrap(~year) +
+  ggsidekick::theme_sleek()
+
+ggsave("figs/man/supp-map-surveys-trawl.pdf", width = 10, height = 10)
+
+
+filter(dset, species_common_name == "pacific cod", year >= 2000,
+       # year <2006,
+       survey_type %in% c("HBLL","SABLE","IPHC FISS")) |>
+  # mutate(
+  #   survey_type = ifelse(survey_abbrev %in% c("MSSM WCVI", "MSSM QCS"), "MSSM", as.character(survey_type)),
+  #   survey_type = ifelse(survey_type %in% c("SYN"), "SYNOPTIC", as.character(survey_type))
+  # ) |>
+  ggplot(aes(longitude, latitude,
+             # size = log(area_swept),
+             # alpha = log(area_swept)),
+             shape = survey_type,
+             colour = survey_type
+  )) +
+  scale_colour_brewer(palette = "Paired") +
+  labs(colour = "Survey",
+       shape = "Survey",
+       x = "Longitude",
+       y = "Latitude") +
+  geom_point(alpha = 0.95, size = 1) + facet_wrap(~year) +
+  ggsidekick::theme_sleek()
+
+ggsave("figs/man/supp-map-surveys-ll.pdf", width = 10, height = 10)
