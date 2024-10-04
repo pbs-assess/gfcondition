@@ -634,118 +634,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     facet_wrap(~year) +
     scale_color_gradient2()
 
-  # load refine function
-  refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distance) {
-    s <- sanity(m, gradient_thresh = 0.005)
-    t <- tidy(m, "ran_pars", conf.int = TRUE)
-# browser()
-    if (!all(s) & length(t$estimate[t$term == "range"]) > 1) {
-      if (abs(diff(t$estimate[t$term == "range"])) < dist | !s$range_ok | !s$hessian_ok | !s$nlminb_ok) {
-        # try shared range but still allowing anisotropy
-        try(m <- update(m,
-                    formula = set_formula,
-                    # formula = as.list(m[["formula"]]),
-                    share_range = TRUE,
-                    weights = m$data$sample_multiplier,
-                    # # spatial = as.list(m[["spatial"]]),
-                    # # spatiotemporal = as.list(m[["spatiotemporal"]]),
-                    # # extra_time = m$extra_time,
-                    # # family = m$family,
-                    # priors = sdmTMBpriors(
-                    #   matern_s = pc_matern(range_gt = dist,
-                    #                        sigma_lt = 2),
-                    #   matern_st = pc_matern(range_gt = dist,
-                    #                         sigma_lt = 2)
-                    # ),
-                    data = m$data, mesh = m$spde
-        ))
-        s <- sanity(m)
-        t <- tidy(m, "ran_pars", conf.int = TRUE)
-      }
-    }
-
-    if (!s$range_ok | !s$sigmas_ok| !s$se_magnitude_ok) {
-      # drop anisotropy and add spatial priors
-      try(m <- update(m,
-          formula = set_formula,
-          weights = m$data$sample_multiplier,
-          priors = sdmTMBpriors(
-            matern_s = pc_matern(range_gt = knot_distance,
-                                 sigma_lt = 2),
-            matern_st = pc_matern(range_gt = knot_distance,
-                                  sigma_lt = 2)
-          ),
-          data = m$data, mesh = m$spde
-        ))
-        s <- sanity(m)
-        t <- tidy(m, "ran_pars", conf.int = TRUE)
-    }
-
-    if (nrow(t)>3){
-      if (t$estimate[t$term == "sigma_O"] < 0.005 | !all(s)) {
-        # drop spatial field
-        try(m <- update(m,
-          formula = set_formula,
-          weights = m$data$sample_multiplier,
-          spatial = "off",
-          spatiotemporal = "rw",
-          priors = sdmTMBpriors(
-            matern_st = pc_matern(range_gt = knot_distance,
-                                  sigma_lt = 2)
-          ),
-          data = m$data, mesh = m$spde
-        ))
-      s <- sanity(m)
-      t <- tidy(m, "ran_pars", conf.int = TRUE)
-      }
-    }
-
-    if (!all(s)) {
-       # strengthen prior
-        try(m <- update(m,
-                    formula = set_formula,
-                    weights = m$data$sample_multiplier,
-                    spatial = "off",
-                    spatiotemporal = "rw",
-                    priors = sdmTMBpriors(
-                      matern_st = pc_matern(range_gt = knot_distance*2,
-                                            sigma_lt = 2)
-                    ),
-                    data = m$data, mesh = m$spde
-        ))
-        s <- sanity(m)
-        t <- tidy(m, "ran_pars", conf.int = TRUE)
-    }
-
-    if (!all(s)){
-      # drop spatiotemporal field instead but add ar1 on time intercepts
-      try(m <- update(m,
-                  formula = set_formula,
-                  # formula = update(set_formula,    ~ . + as.factor(year)),
-                  time_varying = ~ 1,
-                  time_varying_type = "ar1",
-                  weights = m$data$sample_multiplier,
-                  spatial = "on",
-                  spatiotemporal = "off",
-                  priors = sdmTMBpriors(
-                    matern_s = pc_matern(range_gt = knot_distance,
-                                          sigma_lt = 2)
-                  ),
-                  # time_varying_type = "rw0",
-                  # control = sdmTMBcontrol(map = list(ln_tau_V = factor(NA)),
-                  #                         start = list(ln_tau_V = matrix(log(0.1), ncol = 1, nrow = 1))
-                  #                         ),
-                  # silent = TRUE,
-                  data = m$data, mesh = m$spde
-      ))
-    }
-
-    sanity(m)
-    return(m)
-  }
-
   # Estimate condition model ----
-
 
     d$sample_multiplier <- 1
     model_name <- "2024-09" # all survey groups
@@ -795,26 +684,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   if (!exists("m")) {
 
     # TODO: Add DOY with cyclic smoother if we add in commercial data?
-    # require(mgcv)
-    # set.seed(6)
-    # x <- sort(runif(200)*10)
-    # z <- runif(200)
-    # f <- sin(x*2*pi/10)+.5
-    # y <- rpois(exp(f),exp(f))
-    #
-    # ## finished simulating data, now fit model...
-    # b <- gam(y ~ s(x,bs="cc",k=12) + s(z),family=poisson,
-    #          knots=list(x=seq(0,10,length=12)))
-    # ## or more simply
-    # b <- gam(y ~ s(x,bs="cc",k=12) + s(z),family=poisson,
-    #          knots=list(x=c(0,10)))
-    #
-    # ## plot results...
-    # par(mfrow=c(2,2))
-    # plot(x,y);plot(b,select=1,shade=TRUE);lines(x,f-mean(f),col=2)
-    # plot(b,select=2,shade=TRUE);plot(fitted(b),residuals(b))
-
-    sort(unique(d$year))
 
     try(m <- sdmTMB(cond_formula,
       weights = d$sample_multiplier,
@@ -830,6 +699,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
       # reml = TRUE,
       # family = student(df = 5),
       # control = sdmTMBcontrol(newton_loops = 1L),
+      ## priors don't work with anisotropy
       # priors = sdmTMBpriors(
       #   matern_s = pc_matern(range_gt = knot_distance,
       #                        sigma_lt = 2),
