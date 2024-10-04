@@ -24,30 +24,28 @@ dir.create(paste0("data-generated/density-index/"), showWarnings = FALSE)
 source("analysis/00-species-list.R")
 
 # # # # or override with custom subset
-species_list <- list(
-#   "Lingcod"
-"Pacific Cod"
-# #   # "Dover Sole",#
-# # # "Rex Sole", #
-# # # "Flathead Sole",#
-# # # "Southern Rock Sole",#
-# # # "Slender Sole",#
-# # # "Pacific Sanddab",#
-# # "Pacific Halibut"#
-# # # "Butter Sole",
-# # # "Pacific Hake",#
-# # # # "Pacific Tomcod",
-# # # "Spotted Ratfish",
-# # # "Longnose Skate",
-# # # "Big Skate",
-# # # "Sandpaper Skate"
-)
-
-species_list <- list(species = species_list)
+# species_list <- list(
+# "Lingcod"
+# "Pacific Cod",
+# # "Dover Sole",#
+# # "Rex Sole", #
+# # "Flathead Sole",#
+# # "Southern Rock Sole",#
+# # "Slender Sole",#
+# # "Pacific Sanddab",#
+# "Pacific Halibut"#
+# # "Butter Sole",
+# # "Pacific Hake",#
+# # # "Pacific Tomcod",
+# # "Spotted Ratfish",
+# # "Longnose Skate",
+# # "Big Skate",
+# # "Sandpaper Skate"
+# )
 
 # Function for running species density models --------
 
-fit_all_distribution_models <- function(species) {
+fit_all_distribution_models <- function(species, only_sampled) {
 
   # species <- "North Pacific Spiny Dogfish"
 
@@ -56,8 +54,8 @@ fit_all_distribution_models <- function(species) {
   stop_early <- FALSE
 
   ## this only affects maturity specific models
-  only_sampled <- FALSE
-  # only_sampled <- TRUE. ## need to reun for halibut and pcod only
+  # only_sampled <- FALSE
+  # only_sampled <- TRUE ## need to reun for halibut and pcod only
 
   options(scipen = 100, digits = 4)
   theme_set(theme_sleek())
@@ -580,13 +578,14 @@ fit_all_distribution_models <- function(species) {
     # if(nrow(d1a)!= nrow(d1)) { print("")}
 
   ## check what years we have data for ----
-  ## used to filter grid
+    ## used to filter grid
+
   survey_years <- d1 %>%
     select(survey_abbrev, year) %>%
     distinct() %>%
-    mutate(survey = ifelse(survey_abbrev == "HS MSA", "SYN HS",
+    mutate(survey = ifelse(survey_abbrev %in% c("HS MSA", "HS PCOD"), "SYN HS",
       ifelse(survey_abbrev == "MSSM QCS", "SYN QCS",
-        ifelse(survey_abbrev %in% c("OTHER", "MSSM WCVI"), "SYN WCVI",
+        ifelse(survey_abbrev %in% c("THORNYHEAD", "MSSM WCVI"), "SYN WCVI",
           survey_abbrev))
     ))
 
@@ -1079,6 +1078,7 @@ fit_all_distribution_models <- function(species) {
       maturity_possible <- FALSE
     }
 
+    # browser()
 
 if(maturity_possible) {
 
@@ -1162,7 +1162,7 @@ if(maturity_possible) {
     mi <- refine_model(mi, alternate_family = set_family2,
                          use_priors = set_priors)
     }
-    saveRDS(mi, fmi)
+     saveRDS(mi, fmi)
     }
 
   } else {
@@ -1350,7 +1350,9 @@ if(maturity_possible) {
 
 
 ## Run with pmap -----
-pmap(species_list, fit_all_distribution_models)
+arg_list <- list(species = species_list, only_sampled = FALSE)
+
+pmap(arg_list, fit_all_distribution_models)
 
 
 
