@@ -7,8 +7,8 @@ devtools::load_all(".")
 
 # load overall species list
 source("analysis/00-species-list.R")
-#
-# # # or override with custom subset
+# #
+# # # # or override with custom subset
 # species_list <- list(
 # "North Pacific Spiny Dogfish",
 # "Pacific Ocean Perch",
@@ -20,44 +20,38 @@ source("analysis/00-species-list.R")
 # "Canary Rockfish",
 # "Quillback Rockfish",
 # "Redbanded Rockfish",
-# "Redstripe Rockfish", #
-# "Rougheye/Blackspotted Rockfish Complex", #
-# "Silvergray Rockfish", #
+# "Redstripe Rockfish",
+# "Silvergray Rockfish",
 # "Shortspine Thornyhead",
-# "Widow Rockfish", #
+# "Widow Rockfish",
 # "Yelloweye Rockfish",
-# "Yellowmouth Rockfish", #
+# "Yellowmouth Rockfish",
 # "Yellowtail Rockfish",
-# # "Shortraker Rockfish"
+# "Shortraker Rockfish"
 # "Rosethorn Rockfish",
-# # # # "Harlequin Rockfish",
-# # # # "Pygmy Rockfish",
-# "Sharpchin Rockfish"
-# # "Darkblotched Rockfish",
-# # "Greenstriped Rockfish",
-# # "Petrale Sole", #
-# # "Arrowtooth Flounder", #
-# # "English Sole",#
-# # "Dover Sole",#
-# # "Rex Sole", #
-# # "Flathead Sole",#
-# # "Southern Rock Sole",#
-# # "Slender Sole",#
-# # "Pacific Sanddab",#
-"Pacific Halibut"
-# # "Butter Sole",
-# # "Pacific Hake",#
-# # "Pacific Tomcod",
-# # "Spotted Ratfish",
-# # "Longnose Skate",
-# # "Big Skate",
-# # "Sandpaper Skate"
+# "Sharpchin Rockfish",
+# "Darkblotched Rockfish",
+# "Greenstriped Rockfish",
+# "Petrale Sole",
+# "Arrowtooth Flounder",
+# "English Sole",
+# "Dover Sole",
+# "Rex Sole",
+# "Flathead Sole",
+# "Southern Rock Sole",
+# "Slender Sole",
+# "Pacific Sanddab",
+# "Pacific Halibut",
+# "Pacific Hake",
+# "Spotted Ratfish",
+# "Longnose Skate",
+# "Big Skate",
+# "Sandpaper Skate"
 # )
 
 index_list <- expand.grid(species = species_list,
-                          maturity = c(
-                                       "imm",
-                                       "mat"),
+                          maturity = c("mat",
+                                       "imm"),
                           males = c(TRUE, FALSE)
                           ) %>%
   mutate(
@@ -82,24 +76,23 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   # males <- FALSE
   # females <- TRUE
 
-  stop_early <- TRUE
-  # stop_early <- FALSE
+  # stop_early <- TRUE
+  stop_early <- FALSE
 
+  add_density <- add_density
   # add_density <- FALSE
   # add_density <- TRUE
-  add_density <- add_density
-
-  # # probably don't need these anymore
-  unweighted <- TRUE
 
   mat_threshold <- 0.5
-  knot_distance <- 20
+  knot_distance <- dist <- 20
   fig_height <- 4 * 2
   fig_width <- 5 * 2
   delta_dens_model <- TRUE
 
-  dens_model_total <- "dln-all-2024-09" # this is for total
-  dens_model_name1 <- "dln-all-split-2024-09" # these are `all catches' models
+  # dens_model_total <- "dln-all-2024-09" # this is for total
+  dens_model_total <- "dln-ss5-2024-09" # this is for total
+  # dens_model_name1 <- "dln-all-split-2024-09" # these are `all catches' models
+  dens_model_name1 <- "dln-ss5-split-2024-09" # these are `all catches' models
   dens_model_name2 <- "dln-only-sampled-2024-09" # these are `sampled catches' models
 
   theme_set(ggsidekick:::theme_sleek())
@@ -110,10 +103,10 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   just_males <- males
   just_females <- females
 
-  # browser()
-
-  print(paste(species, maturity, "(males:", just_males, ")"))
-
+  print(paste(species, maturity,
+              if(maturity=="mat"){ifelse(just_males, "males", "females")},
+              ifelse(add_density, "with density", "")
+              ))
 
   # Check which density models to use ----
   id0 <- readRDS(paste0("data-generated/density-index/",
@@ -218,9 +211,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     }
   }
 
-
-
-
   # Load condition data and attach lagged density estimates ----
   dir.create(paste0("data-generated/condition-data-w-dens/"),
              showWarnings = FALSE)
@@ -243,7 +233,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
         case_when(
           survey_abbrev %in% c("HBLL OUT N", "HBLL OUT S")~"HBLL",
           survey_abbrev %in% c("MSSM QCS", "MSSM WCVI")~"MSSM",
-          survey_abbrev %in% c("OTHER", "HS MSA", "SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI")~"TRAWL",
+          survey_abbrev %in% c("HS PCOD", "THORNYHEAD", "HS MSA", "SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI")~"TRAWL",
           survey_series_id == 68~"HAKE",
           TRUE~survey_abbrev
         ))
@@ -331,9 +321,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
       } else {
         return(NA)
       }
-
       # md <- sdmTMB:::update_version(md)
-
 
       nd0 <- nd0 %>% filter(year >= min(md$data$year))
       # can't predict prior to first year of density model
@@ -347,7 +335,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
       } else {
         pd0 <- pd0 %>% mutate(density = exp(est))
       }
-
     }
 
     pd0 <- pd0 %>%
@@ -370,8 +357,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   }
 
   # Select relevant data and grid ----
-
-  # browser()
 
   if (mat_class == "mat") {
     if (just_males) {
@@ -631,8 +616,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
   d$survey_group <- factor(d$survey_group, levels = levels(sg$survey_group))
 
-  # browser()
-
   mesh <- make_mesh(d, c("X", "Y"), cutoff = knot_distance)
 
   ggplot() +
@@ -655,35 +638,108 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distance) {
     s <- sanity(m, gradient_thresh = 0.005)
     t <- tidy(m, "ran_pars", conf.int = TRUE)
-    if (!all(s) & !m$call$share_range) {
-      # browser()
-      t <- tidy(m, "ran_pars", conf.int = TRUE)
-      if (abs(diff(t$estimate[t$term == "range"])) < dist|!s$range_ok) {
-        m <- update(m,
-          formula = set_formula,
-          # formula = as.list(m[["formula"]]),
-          share_range = TRUE,
-          weights = m$data$sample_multiplier,
-          # # spatial = as.list(m[["spatial"]]),
-          # # spatiotemporal = as.list(m[["spatiotemporal"]]),
-          # # extra_time = m$extra_time,
-          # # family = m$family,
-          data = m$data, mesh = m$spde
-        )
+# browser()
+    if (!all(s) & length(t$estimate[t$term == "range"]) > 1) {
+      if (abs(diff(t$estimate[t$term == "range"])) < dist | !s$range_ok | !s$hessian_ok | !s$nlminb_ok) {
+        # try shared range but still allowing anisotropy
+        try(m <- update(m,
+                    formula = set_formula,
+                    # formula = as.list(m[["formula"]]),
+                    share_range = TRUE,
+                    weights = m$data$sample_multiplier,
+                    # # spatial = as.list(m[["spatial"]]),
+                    # # spatiotemporal = as.list(m[["spatiotemporal"]]),
+                    # # extra_time = m$extra_time,
+                    # # family = m$family,
+                    # priors = sdmTMBpriors(
+                    #   matern_s = pc_matern(range_gt = dist,
+                    #                        sigma_lt = 2),
+                    #   matern_st = pc_matern(range_gt = dist,
+                    #                         sigma_lt = 2)
+                    # ),
+                    data = m$data, mesh = m$spde
+        ))
         s <- sanity(m)
         t <- tidy(m, "ran_pars", conf.int = TRUE)
       }
     }
-    if (!all(s)) {
-      if (t$estimate[t$term == "sigma_O"] < 0.001) {
-        m <- update(m,
+
+    if (!s$range_ok | !s$sigmas_ok| !s$se_magnitude_ok) {
+      # drop anisotropy and add spatial priors
+      try(m <- update(m,
+          formula = set_formula,
+          weights = m$data$sample_multiplier,
+          priors = sdmTMBpriors(
+            matern_s = pc_matern(range_gt = knot_distance,
+                                 sigma_lt = 2),
+            matern_st = pc_matern(range_gt = knot_distance,
+                                  sigma_lt = 2)
+          ),
+          data = m$data, mesh = m$spde
+        ))
+        s <- sanity(m)
+        t <- tidy(m, "ran_pars", conf.int = TRUE)
+    }
+
+    if (nrow(t)>3){
+      if (t$estimate[t$term == "sigma_O"] < 0.005 | !all(s)) {
+        # drop spatial field
+        try(m <- update(m,
           formula = set_formula,
           weights = m$data$sample_multiplier,
           spatial = "off",
+          spatiotemporal = "rw",
+          priors = sdmTMBpriors(
+            matern_st = pc_matern(range_gt = knot_distance,
+                                  sigma_lt = 2)
+          ),
           data = m$data, mesh = m$spde
-        )
+        ))
+      s <- sanity(m)
+      t <- tidy(m, "ran_pars", conf.int = TRUE)
       }
     }
+
+    if (!all(s)) {
+       # strengthen prior
+        try(m <- update(m,
+                    formula = set_formula,
+                    weights = m$data$sample_multiplier,
+                    spatial = "off",
+                    spatiotemporal = "rw",
+                    priors = sdmTMBpriors(
+                      matern_st = pc_matern(range_gt = knot_distance*2,
+                                            sigma_lt = 2)
+                    ),
+                    data = m$data, mesh = m$spde
+        ))
+        s <- sanity(m)
+        t <- tidy(m, "ran_pars", conf.int = TRUE)
+    }
+
+    if (!all(s)){
+      # drop spatiotemporal field instead but add ar1 on time intercepts
+      try(m <- update(m,
+                  formula = set_formula,
+                  # formula = update(set_formula,    ~ . + as.factor(year)),
+                  time_varying = ~ 1,
+                  time_varying_type = "ar1",
+                  weights = m$data$sample_multiplier,
+                  spatial = "on",
+                  spatiotemporal = "off",
+                  priors = sdmTMBpriors(
+                    matern_s = pc_matern(range_gt = knot_distance,
+                                          sigma_lt = 2)
+                  ),
+                  # time_varying_type = "rw0",
+                  # control = sdmTMBcontrol(map = list(ln_tau_V = factor(NA)),
+                  #                         start = list(ln_tau_V = matrix(log(0.1), ncol = 1, nrow = 1))
+                  #                         ),
+                  # silent = TRUE,
+                  data = m$data, mesh = m$spde
+      ))
+    }
+
     sanity(m)
     return(m)
   }
@@ -727,6 +783,8 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     }
   }
 
+  rm(m) # just in case it was left in the global environment
+
   # if commented out, will be forced to rerun model
   if (file.exists(mf)) {
     try(m <- readRDS(mf))
@@ -758,7 +816,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
     sort(unique(d$year))
 
-    m <- sdmTMB(cond_formula,
+    try(m <- sdmTMB(cond_formula,
       weights = d$sample_multiplier,
       mesh = mesh,
       data = d,
@@ -767,37 +825,81 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
       # spatiotemporal = "off",
       extra_time = sdmTMB:::find_missing_time(d$year),
       share_range = FALSE,
-      silent = FALSE,
+      # silent = FALSE,
       time = "year",
       # reml = TRUE,
-      family = lognormal(link = "log"),
       # family = student(df = 5),
       # control = sdmTMBcontrol(newton_loops = 1L),
-      priors = sdmTMBpriors(
-        matern_s = pc_matern(range_gt = knot_distance,
-                             sigma_lt = 2),
-        matern_st = pc_matern(range_gt = knot_distance,
-                              sigma_lt = 2)
-      )
-    )
+      # priors = sdmTMBpriors(
+      #   matern_s = pc_matern(range_gt = knot_distance,
+      #                        sigma_lt = 2),
+      #   matern_st = pc_matern(range_gt = knot_distance,
+      #                         sigma_lt = 2)
+      # ),
+      anisotropy = TRUE,
+      family = lognormal(link = "log")
+    ))
 
-    print(paste(species, maturity, "(males:", just_males, ")"))
+    if (!exists("m")) {
+
+      try(m <- sdmTMB(cond_formula,
+                      weights = d$sample_multiplier,
+                      mesh = mesh,
+                      data = d,
+                      spatial = "on",
+                      spatiotemporal = "rw",
+                      # spatiotemporal = "off",
+                      extra_time = sdmTMB:::find_missing_time(d$year),
+                      # share_range = FALSE,
+                      # silent = FALSE,
+                      time = "year",
+                      priors = sdmTMBpriors(
+                        matern_s = pc_matern(range_gt = knot_distance,
+                                             sigma_lt = 2),
+                        matern_st = pc_matern(range_gt = knot_distance,
+                                              sigma_lt = 2)
+                      ),
+                      family = lognormal(link = "log")
+      ))
+
+    }
+    if (!exists("m")) {
+    print(paste(species, maturity,
+                if(maturity=="mat"){ifelse(just_males, "males", "females")},
+                "model failed completely"))
+      return(NA)
+    } else {
 
     m <- refine_cond_model(m, set_formula = cond_formula,
                             dist = knot_distance)
     saveRDS(m, mf)
+    }
   } else {
 
     ## make sure if converged last time
-    # m1 <- refine_cond_model(m1, set_formula = cond_formula, dist = knot_distance)
-    # saveRDS(m1, mf)
+    m <- refine_cond_model(m,
+                           set_formula = cond_formula,
+                          dist = knot_distance)
+    saveRDS(m, mf)
   }
 
   m
   m$sd_report
-  tidy(m, "ran_pars", conf.int = TRUE)
+  t <- tidy(m, "ran_pars", conf.int = TRUE)
+  s <- sanity(m)
 
-  # m <- m1
+# browser()
+  # p <- get_pars(m)
+  # rho <- 2 * plogis(p$rho_time_unscaled) - 1
+  # rho
+
+
+  if(!all(s)){
+    print(paste(species, maturity,
+                     if(maturity=="mat"){ifelse(just_males, "males", "females")},
+                     "model did not converge"))
+    return(NA)
+  }
 
   # Add density dependence ----
   ## don't do this for now, but can be used to explore utility of covariates
@@ -859,46 +961,56 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     }
 
     if (!exists("m2")) {
-
-      m2 <- update(m, cond_formula2,
+      try(m2 <- update(m, cond_formula2,
         weights = d$sample_multiplier,
-        spatial = "on",
-        spatiotemporal = "rw",
-        share_range = FALSE,
+        # spatial = "on",
+        # spatiotemporal = "rw",
+        # share_range = FALSE,
         # control = sdmTMBcontrol(upper = list(b_j = bx)),
         mesh = mesh2,
         data = d
-      )
+      ))
+    }
 
+    if (!exists("m2")) {
+      print(paste(species, maturity,
+                  if(maturity=="mat"){ifelse(just_males, "males", "females")},
+                  "model with density failed completely."))
+    } else {
       rm(m)
-
       saveRDS(m2, mf2)
       m2 <- refine_cond_model(m2, set_formula = cond_formula2,
                               # upper_limits = bx,
                               dist = knot_distance)
       saveRDS(m2, mf2)
-    } else {
-      # saveRDS(m2, mf2)
-    }
 
-    sanity(m2)
+    s <- sanity(m2)
     m2
     m2$sd_report
     tidy(m2, "ran_pars", conf.int = TRUE)
 
+    if(!all(s)){
+      print(paste(species, maturity,
+                       if(maturity=="mat"){ifelse(just_males, "males", "females")},
+                       "model with density did not converge."))
+      m <- readRDS(mf)
+    } else {
     ## check if effect of density is negative by more than the SE on the estimate
     ## if not, revert to m1 for index generation
     t <- tidy(m2, conf.int = TRUE)
 
-    if(t$estimate[t$term == "log_density_c"] < - t$std.error[t$term == "log_density_c"]){
+    # if(t$estimate[t$term == "log_density_c"] < - t$std.error[t$term == "log_density_c"]){
     ## maybe this approach would make more sense?
-    # if(t$conf.high[t$term == "log_density_c"] < 0){
+    if(t$conf.high[t$term == "log_density_c"] < 0){
       m <- m2
     } else {
+      print(paste(species, maturity,
+                  if(maturity=="mat"){ifelse(just_males, "males", "females")},
+                  "model with density converged, but effect potentially positive."))
       m <- readRDS(mf)
     }
   }
-
+  }
 
   # Filter grid ----
   if (add_density) {
@@ -945,7 +1057,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     model_name, "-", knot_distance, "-km.rds"
   )
 
-  # browser()
   if (!file.exists(i1)) {
 
   pc <- predict(m, newdata = grid, return_tmb_object = TRUE)
@@ -956,6 +1067,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     mutate(cond = exp(est))
 
 
+  # browser()
   # filter to plot only cells representing 99% of mean predicted biomass
   # cells must be defined by "X", "Y", time by "year", and biomass/abundance stored as "density"
   p2 <- trim_predictions_by_year(p2, 0.001)
@@ -1260,8 +1372,8 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
 # Run with pmap -----
 
-# index_list <- index_list[2, ]
-pmap(index_list, calc_condition_indices)
+# # index_list <- index_list[2, ]
+# pmap(index_list, calc_condition_indices)
 
 # Run with furrr ----
 
