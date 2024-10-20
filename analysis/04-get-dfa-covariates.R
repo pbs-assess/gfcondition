@@ -4,9 +4,8 @@
 library(pacea)
 library(tidyverse)
 
-# download all variables
-bccm_all_variables()
-
+# # download all variables, if not alreafy done
+# bccm_all_variables()
 
 spatial_average <- function(pacea_st_obj,
                             area = list(matrix(c(-134, -131, -128, -124, -125.5, -134, -134,
@@ -14,7 +13,7 @@ spatial_average <- function(pacea_st_obj,
                                                ncol = 2))
 ){
   stopifnot("pacea_st_obj must be of class pacea_st" =
-              ("pacea_st" %in% class(pacea_st_obj)))
+              any(c("pacea_st","pacea_oi")  %in% class(pacea_st_obj)))
 
   # convert area to a simple features object, with the correct projection
   area_sf <- sf::st_sfc(sf::st_polygon(area),
@@ -28,6 +27,8 @@ spatial_average <- function(pacea_st_obj,
   obj_area_drop <- sf::st_drop_geometry(obj_area) %>%
     as_tibble()
 
+
+  if("pacea_st" %in% class(pacea_st_obj)) {
   avg <- colMeans(obj_area_drop)
 
   obj_area_tib <- tibble::tibble(value = avg)
@@ -43,6 +44,10 @@ spatial_average <- function(pacea_st_obj,
                                   year,
                                   month)
   obj_area_tib
+  } else {
+    stop("pacea_st_obj must be of class pacea_st")
+  }
+
 }
 
 
@@ -110,6 +115,10 @@ saveRDS(pp, "data-raw/cw_bottom_temperature.rds")
 pp <- spatial_average(bccm_surface_temperature(), area = area)
 saveRDS(pp, "data-raw/cw_surface_temperature.rds")
 
+# oisst_month
+load("~/github/dfo/gfcondition/data-raw/oisst_month_grid26.rda")
+pp <- spatial_average(oisst_month_grid26, area = area)
+saveRDS(pp, "data-raw/cw_surface_temperature_oi.rds")
 
 
 # pacea_long <- function(data, names_to = "date", values_to = "value") {
