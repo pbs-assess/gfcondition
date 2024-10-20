@@ -9,9 +9,8 @@ library(gfplot)
 source("analysis/00-species-list.R")
 
 # species_list <- list(
-# #   "Sablefish"
-# # #   "North Pacific Spiny Dogfish"
-# # # # "Slender Sole",
+# "Sablefish"
+# "North Pacific Spiny Dogfish"
 # "Pacific Halibut"
 # )
 
@@ -20,22 +19,14 @@ species_list <- list(species = species_list)
 
 get_condition_data <- function(species){
 
-# browser()
-
 update_m <- FALSE
 # update_m <- TRUE
 
 ## code checking within function
-# species <- "Arrowtooth Flounder"
-# species <- "Petrale Sole"
 # species <- "Pacific Cod"
-# species <- "Walleye Pollock"
-# species <- "Slender Sole"
 # species <- "Pacific Halibut"
 
-# mat_threshold  <-  0.05
 mat_threshold <- 0.5
-# mat_threshold <- 0.95
 
 spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 
@@ -54,48 +45,41 @@ filter(!is.na(longitude), !is.na(latitude),
 
 check_for_duplicates <- dat[duplicated(dat$specimen_id), ]
 
-if(nrow(check_for_duplicates)>0){ stop(paste(species, "has duplicate specimen ids."))}
+if(nrow(check_for_duplicates)>0){
+  stop(paste(species, "has duplicate specimen ids."))
+  } else {
+  print(paste("Prepare condition data for", species))
+}
 
 sort(unique(dat$survey_abbrev))
 
 dset <- readRDS("data-generated/all-sets-used.rds") %>%
   filter(species_common_name == tolower(species))
-# sort(unique(dset$survey_abbrev))
-# unique(select(dset, usability_code, usability_desc)) %>% view()
-
-
-#TODO: temporary because false zeros were in an older data pull
-dat$catch_count <- ifelse(dat$catch_weight > 0 & dat$catch_count == 0, NA, dat$catch_count)
-dat$catch_weight <- ifelse(dat$catch_count > 0 & dat$catch_weight == 0, NA, dat$catch_weight)
-
 
 datf <- filter(dat, !is.na(length))
-# datf <- filter(datf, !is.na(weight))
-# datf <- filter(datf, year > 2002)
-
 datf <- filter(datf, !is.na(survey_abbrev))
 unique(datf$survey_abbrev)
 unique(dat$survey_abbrev)
 
-
 # TODO: decide which surveys to include, for now including all data available
-# Have there been any measurement changes or are there differences between HBLL and synoptic in lengths or maturity keys?
+# Have there been any measurement changes, or are there differences between HBLL and synoptic in lengths or maturity keys?
 
 fish <- dat
 
-
-## not needed because only the more common length type populates the length variable
+## not needed because only the more common length type populates the 'length' variable
 ## alternates are included only in their own columns
 # dat <- filter(dat, length_type = which.max(table(dat$length_type)))
 ## but include this check, just in case there's a problem
-if(length(unique(fish$length_type))>1){stop("Stop. Two different length types.")}
+if(length(unique(fish$length_type))>1){
+  stop("Stop. Two different length types.")
+  }
 
-ggplot(
-  filter(fish, !is.na(latitude) & !is.na(longitude)),
-  aes(longitude, latitude, colour = survey_abbrev)
-) +
-  geom_point() +
-  facet_wrap(~year)
+# ggplot(
+#   filter(fish, !is.na(latitude) & !is.na(longitude)),
+#   aes(longitude, latitude, colour = survey_abbrev)
+# ) +
+#   geom_point() +
+#   facet_wrap(~year)
 
 # 2. Split samples into immature and mature and into length bins ----
 # Starting with code lifted from split by maturity function in case we also want to functionalize this
@@ -104,9 +88,8 @@ split_by_maturity <- TRUE
 split_by_sex <- TRUE
 immatures_pooled <- TRUE
 
-## might be worth getting the same model from the density split
-
 if(!update_m){
+## Use the same maturity ogive as used for the density split
 # dss <- readRDS(paste0("data-generated/split-catch-data/", spp, ".rds"))
 # m <- dss$m
 m <- readRDS(paste0("data-generated/split-catch-data/", spp, ".rds"))$m
@@ -171,7 +154,6 @@ sample_id_re <- TRUE
 
 # -----
 # does maturity data exist at all for this species?
-# browser()
 if (split_by_maturity) {
   maturity_codes <- unique(fish$maturity_code)
 
@@ -236,8 +218,6 @@ if (split_by_maturity) {
                              custom_maturity_at = custom_maturity,
                              year_re = FALSE
           )
-
-          # browser()
           # gfplot::plot_mat_ogive(m)
         }
 
@@ -382,8 +362,6 @@ if (split_by_maturity) {
 
 if(update_m&is.null(custom_length_threshold)) {
 
-  browser()
-
   gfplot::plot_mat_ogive(m)
 
   dir.create(paste0("data-generated/maturity-ogives-02/"), showWarnings = FALSE)
@@ -391,7 +369,6 @@ if(update_m&is.null(custom_length_threshold)) {
 }
 
 # 2. Le Cren’s relative condition factor ----
-# browser()
 
 fish_groups <- filter(fish_groups, length > 0| is.na(length))
 fish_groups <- filter(fish_groups, weight > 0| is.na(weight))
@@ -404,14 +381,11 @@ gfplot::plot_length_weight(object_female = mf, object_male = mm)
 
 ## Remove black swan outliers ----
 
-# browser()
-
 sd_threshold <- 2
 is_heavy_tail <- TRUE
 
 # sd_threshold <- 3
 # is_heavy_tail <- FALSE
-
 
 filter_lw_outliers <- function(model,
                                   numsd = sd_threshold,
@@ -494,8 +468,6 @@ ds <- dd2 %>%
   ) %>%
   unique()
 
-# browser()
-
 # remove some rockfish outliers
 dat <- dat %>%
   filter(!(weight > 900 & species_common_name == tolower("Pacific Sanddab")))  %>%
@@ -536,13 +508,10 @@ ds <- ds %>%
 # abline(v = m$mat_perc$mean$f.mean.p0.5, col = "green")
 # # add male maturity in blue
 # abline(v = m$mat_perc$m.p0.5, col = "blue")
-# abline(v = m$mat_perc$mean$m.mean.p0.5, col = "blue")
-
+# abline(v = m$mat_perc$mean$m.mean.p0.5, col = "blue"
 
 # 5. Outliers plotted ----
 
-# browser()
-#
 ggplot(dat |> mutate(weight = weight/1000) |> filter(
   sex %in% c(1,2)
   ), aes(length, weight)) +
@@ -615,8 +584,6 @@ ggsave(paste0("figs/cond-black-swan-",
 
 dir.create(paste0("data-generated/condition-data-black-swan/"), showWarnings = FALSE)
 saveRDS(ds, paste0("data-generated/condition-data-black-swan/", spp, "-mat-", mat_threshold, "-condition.rds"))
-
-# browser()
 }
 
 pmap(species_list, get_condition_data)

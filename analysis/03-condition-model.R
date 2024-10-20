@@ -61,6 +61,7 @@ index_list <- expand.grid(species = species_list,
   distinct()
 
 index_list$add_density <- FALSE
+# index_list$add_density <- TRUE
 
 # do both density agnostic and dependent versions
 index_list2 <- index_list
@@ -79,7 +80,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   # stop_early <- TRUE
   stop_early <- FALSE
 
-  add_density <- add_density
   # add_density <- FALSE
   # add_density <- TRUE
 
@@ -99,11 +99,12 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
   spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 
+  add_density <- add_density
   mat_class <- maturity
   just_males <- males
   just_females <- females
 
-  print(paste(species, maturity,
+  message(paste(species, maturity,
               if(maturity=="mat"){ifelse(just_males, "males", "females")},
               ifelse(add_density, "with density", "")
               ))
@@ -352,12 +353,9 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     saveRDS(d2, f)
   } else {
     d2 <- readRDS(f)
-
-
   }
 
   # Select relevant data and grid ----
-
   if (mat_class == "mat") {
     if (just_males) {
 
@@ -385,7 +383,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
             prop_density_by_survey = density / survey_density
           )
       } else {
-        print(paste("No density predictions for mature male ", species, "densities."))
+        warning(paste("No density predictions for mature male ", species, "densities."))
         return(NA)
       }
     } else {
@@ -414,7 +412,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
               prop_density_by_survey = density / survey_density
             )
         } else {
-          print(paste("No density predictions for mature female ", species, "densities."))
+          warning(paste("No density predictions for mature female ", species, "densities."))
           return(NA)
         }
       } else {
@@ -448,7 +446,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
             group_by(year, survey) %>%
             mutate(survey_density = sum(density), prop_density_by_survey = density / survey_density)
         } else {
-          print(paste("No density predictions for all mature ", species, "densities."))
+          warning(paste("No density predictions for all mature ", species, "densities."))
           return(NA)
         }
       }
@@ -484,7 +482,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
         # browser()
       } else {
-        print(paste("No density predictions for immature ", species, "densities."))
+        warning(paste("No density predictions for immature ", species, "densities."))
         return(NA)
       }
     } else {
@@ -513,14 +511,13 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
                  prop_density_by_survey = density / survey_density)
         ungroup()
       } else {
-        print(paste("No density predictions for total ", species, "densities."))
+        warning(paste("No density predictions for total ", species, "densities."))
         return(NA)
       }
     }
   }
 
   # Add density covariates to grid ----
-
   if (add_density) {
 
     if(mat_class == "mat") {
@@ -587,7 +584,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
         ungroup()
     }
   }
-
 
   # Make mesh ----
   hist(d$cond_fac)
@@ -734,7 +730,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
     }
     if (!exists("m")) {
-    print(paste(species, maturity,
+    warning(paste(species, maturity,
                 if(maturity=="mat"){ifelse(just_males, "males", "females")},
                 "model failed completely"))
       return(NA)
@@ -765,7 +761,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
 
   if(!all(s)){
-    print(paste(species, maturity,
+    warning(paste(species, maturity,
                      if(maturity=="mat"){ifelse(just_males, "males", "females")},
                      "model did not converge"))
     return(NA)
@@ -833,9 +829,9 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     if (!exists("m2")) {
       try(m2 <- update(m, cond_formula2,
         weights = d$sample_multiplier,
-        # spatial = "on",
-        # spatiotemporal = "rw",
-        # share_range = FALSE,
+        spatial = "on",
+        spatiotemporal = "rw",
+        share_range = FALSE,
         # control = sdmTMBcontrol(upper = list(b_j = bx)),
         mesh = mesh2,
         data = d
@@ -843,9 +839,10 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     }
 
     if (!exists("m2")) {
-      print(paste(species, maturity,
+      warning(paste(species, maturity,
                   if(maturity=="mat"){ifelse(just_males, "males", "females")},
                   "model with density failed completely."))
+      m <- readRDS(mf)
     } else {
       rm(m)
       saveRDS(m2, mf2)
@@ -860,7 +857,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     tidy(m2, "ran_pars", conf.int = TRUE)
 
     if(!all(s)){
-      print(paste(species, maturity,
+      warning(paste(species, maturity,
                        if(maturity=="mat"){ifelse(just_males, "males", "females")},
                        "model with density did not converge."))
       m <- readRDS(mf)
@@ -874,12 +871,13 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     if(t$conf.high[t$term == "log_density_c"] < 0){
       m <- m2
     } else {
-      print(paste(species, maturity,
+      warning(paste(species, maturity,
                   if(maturity=="mat"){ifelse(just_males, "males", "females")},
                   "model with density converged, but effect potentially positive."))
       m <- readRDS(mf)
     }
   }
+    }
   }
 
   # Filter grid ----
