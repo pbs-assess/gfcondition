@@ -5,6 +5,24 @@ update_mesh <- function(x) { # x = fitted sdmTMB model
   make_mesh(x$data, x$spde$xy_cols, mesh = x$spde$mesh)
 }
 
+label_yrs <- function(x, start_year = yrs[1]) {
+  x + start_year - 1
+}
+
+#'
+#' @export
+#'
+sfc_as_cols <- function(x, names = c("x","y")) {
+  stopifnot(inherits(x,"sf") #&& inherits(sf::st_geometry(x),"sfc_POINT")
+  )
+  ret <- sf::st_coordinates(x)
+  ret <- tibble::as_tibble(ret)
+  stopifnot(length(names) == ncol(ret))
+  x <- x[ , !names(x) %in% names]
+  ret <- setNames(ret,names)
+  dplyr::bind_cols(x,ret)
+}
+
 #'
 #' @export
 #'

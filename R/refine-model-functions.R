@@ -156,8 +156,8 @@ refine_model <- function(m, alternate_family = set_family2, use_priors = sdmTMBp
   }
 }
 
-
-# refine non-delta model; particularly one with anisotropy and/or without shared ranges
+#' refine non-delta model; particularly one with anisotropy and/or without shared ranges
+#' @export
 refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distance) {
   s <- sanity(m, gradient_thresh = 0.005)
   t <- tidy(m, "ran_pars", conf.int = TRUE)
@@ -193,9 +193,9 @@ refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distanc
                     formula = set_formula,
                     weights = m$data$sample_multiplier,
                     priors = sdmTMBpriors(
-                      matern_s = pc_matern(range_gt = knot_distance,
+                      matern_s = pc_matern(range_gt = dist,
                                            sigma_lt = 2),
-                      matern_st = pc_matern(range_gt = knot_distance,
+                      matern_st = pc_matern(range_gt = dist,
                                             sigma_lt = 2)
                     ),
                     data = m$data, mesh = m$spde
@@ -213,7 +213,7 @@ refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distanc
                       spatial = "off",
                       spatiotemporal = "rw",
                       priors = sdmTMBpriors(
-                        matern_st = pc_matern(range_gt = knot_distance,
+                        matern_st = pc_matern(range_gt = dist,
                                               sigma_lt = 2)
                       ),
                       data = m$data, mesh = m$spde
@@ -231,7 +231,7 @@ refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distanc
                     spatial = "off",
                     spatiotemporal = "rw",
                     priors = sdmTMBpriors(
-                      matern_st = pc_matern(range_gt = knot_distance*2,
+                      matern_st = pc_matern(range_gt = dist*2,
                                             sigma_lt = 2)
                     ),
                     data = m$data, mesh = m$spde
@@ -251,7 +251,7 @@ refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distanc
                     spatial = "on",
                     spatiotemporal = "off",
                     priors = sdmTMBpriors(
-                      matern_s = pc_matern(range_gt = knot_distance,
+                      matern_s = pc_matern(range_gt = dist,
                                            sigma_lt = 2)
                     ),
                     # time_varying_type = "rw0",
