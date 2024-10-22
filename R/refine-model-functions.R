@@ -161,7 +161,7 @@ refine_model <- function(m, alternate_family = set_family2, use_priors = sdmTMBp
 refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distance) {
   s <- sanity(m, gradient_thresh = 0.005)
   t <- tidy(m, "ran_pars", conf.int = TRUE)
-  # browser()
+
   if (!all(s) & length(t$estimate[t$term == "range"]) > 1) {
     if (abs(diff(t$estimate[t$term == "range"])) < dist | !s$range_ok | !s$hessian_ok | !s$nlminb_ok) {
       # try shared range but still allowing anisotropy

@@ -7,52 +7,53 @@ devtools::load_all(".")
 
 # load overall species list
 source("analysis/00-species-list.R")
-# #
+
 # # # # or override with custom subset
 # species_list <- list(
-# "North Pacific Spiny Dogfish",
-# "Pacific Ocean Perch",
-# "Pacific Cod",
-# "Walleye Pollock",
-# "Sablefish",
-# "Lingcod",
-# "Bocaccio",
-# "Canary Rockfish",
-# "Quillback Rockfish",
-# "Redbanded Rockfish",
-# "Redstripe Rockfish",
-# "Silvergray Rockfish",
-# "Shortspine Thornyhead",
-# "Widow Rockfish",
-# "Yelloweye Rockfish",
-# "Yellowmouth Rockfish",
-# "Yellowtail Rockfish",
-# "Shortraker Rockfish"
-# "Rosethorn Rockfish",
-# "Sharpchin Rockfish",
-# "Darkblotched Rockfish",
-# "Greenstriped Rockfish",
-# "Petrale Sole",
-# "Arrowtooth Flounder",
-# "English Sole",
-# "Dover Sole",
-# "Rex Sole",
-# "Flathead Sole",
-# "Southern Rock Sole",
-# "Slender Sole",
-# "Pacific Sanddab",
-# "Pacific Halibut",
-# "Pacific Hake",
-# "Spotted Ratfish",
-# "Longnose Skate",
-# "Big Skate",
-# "Sandpaper Skate"
+# # "North Pacific Spiny Dogfish",
+# # "Pacific Ocean Perch",
+# # "Pacific Cod",
+# # "Walleye Pollock",
+# # "Sablefish",
+# # "Lingcod",
+# # "Bocaccio",
+# # "Canary Rockfish",
+# # "Quillback Rockfish",
+# # "Redbanded Rockfish",
+# # "Redstripe Rockfish",
+# # "Silvergray Rockfish",
+# # "Shortspine Thornyhead",
+# # "Widow Rockfish",
+# # "Yelloweye Rockfish",
+# # "Yellowmouth Rockfish",
+# # "Yellowtail Rockfish",
+# # "Shortraker Rockfish"
+# # "Rosethorn Rockfish",
+# # "Sharpchin Rockfish",
+# # "Darkblotched Rockfish",
+# # "Greenstriped Rockfish",
+# # "Petrale Sole",
+# # "Arrowtooth Flounder",
+# # "English Sole",
+# # "Dover Sole",
+# # "Rex Sole",
+# # "Flathead Sole",
+# # "Southern Rock Sole",
+# # "Slender Sole",
+# # "Pacific Sanddab",
+# "Pacific Halibut"
+# # "Pacific Hake",
+# # "Spotted Ratfish",
+# # "Longnose Skate",
+# # "Big Skate",
+# # "Sandpaper Skate"
 # )
 
 index_list <- expand.grid(species = species_list,
-                          maturity = c("mat",
-                                       "imm"),
-                          males = c(TRUE, FALSE)
+                          maturity = c(# "imm",
+                                       "mat"),
+                          males = c(TRUE,
+                                    FALSE)
                           ) %>%
   mutate(
     females = ifelse(males == FALSE & maturity == "mat", TRUE, FALSE),
@@ -72,13 +73,19 @@ index_list <- bind_rows(index_list, index_list2)
 
 calc_condition_indices <- function(species, maturity, males, females, add_density) {
 
+  source("R/refine-condition-models.R", local = TRUE)
   # species <- "Rex Sole"
   # maturity <- "mat"
   # males <- FALSE
   # females <- TRUE
+  rm(m)
+  # this only works if called to local environment
 
   # stop_early <- TRUE
   stop_early <- FALSE
+
+  min_yr_count <- 10 # current main folder, hasn't been run with density yet
+  # min_yr_count <- NULL
 
   # add_density <- FALSE
   # add_density <- TRUE
@@ -591,6 +598,14 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
   d <- d %>% filter(year >= min(gridA$year))
 
+  if(!is.null(min_yr_count)) {
+  dy <- d %>%
+    group_by(year) %>%
+    summarise(n = n()) |>
+    filter(n > min_yr_count)
+
+  d <- d %>% filter(year %in% dy$year)
+  }
   sg <- d %>%
     group_by(survey_group) %>%
     summarise(n = n()) |>
@@ -668,14 +683,14 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     }
   }
 
+  # Model (density-agnostic) ----
+
   rm(m) # just in case it was left in the global environment
 
   # if commented out, will be forced to rerun model
   if (file.exists(mf)) {
     try(m <- readRDS(mf))
   }
-
-  # browser()
 
   if (!exists("m")) {
 
@@ -744,7 +759,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
     ## make sure if converged last time
     m <- refine_cond_model(m,
-                           set_formula = cond_formula,
+                          set_formula = cond_formula,
                           dist = knot_distance)
     saveRDS(m, mf)
   }
@@ -752,13 +767,11 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   m
   m$sd_report
   t <- tidy(m, "ran_pars", conf.int = TRUE)
-  s <- sanity(m)
+  s <- sanity(m, gradient_thresh = 0.005)
 
-# browser()
   # p <- get_pars(m)
   # rho <- 2 * plogis(p$rho_time_unscaled) - 1
   # rho
-
 
   if(!all(s)){
     warning(paste(species, maturity,
@@ -766,11 +779,9 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
                      "model did not converge"))
     return(NA)
   }
-
-  # Add density dependence ----
+  # Add density dependence to model ----
   ## don't do this for now, but can be used to explore utility of covariates
   if (add_density) {
-
     d$log_density_c <- d$log_density - mean(d$log_density, na.rm = TRUE)
 
       d$sample_multiplier <- 1
@@ -817,6 +828,8 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
     mesh2 <- make_mesh(d, c("X", "Y"), cutoff = 15)
 
+    # Model (with density) ----
+
     mf2 <- paste0(
       "data-generated/condition-models-", group_tag, "/", model_name, "/",
       spp, "-c-", group_tag, "-", model_name, "-", knot_distance, "-km.rds"
@@ -839,6 +852,18 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     }
 
     if (!exists("m2")) {
+      try(m2 <- update(m, cond_formula2,
+                       weights = d$sample_multiplier,
+                       spatial = "on",
+                       spatiotemporal = "rw",
+                       share_range = TRUE,
+                       mesh = mesh2,
+                       data = d
+      ))
+    }
+
+    if (!exists("m2")) {
+
       warning(paste(species, maturity,
                   if(maturity=="mat"){ifelse(just_males, "males", "females")},
                   "model with density failed completely."))
@@ -851,7 +876,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
                               dist = knot_distance)
       saveRDS(m2, mf2)
 
-    s <- sanity(m2)
+    s <- sanity(m2, gradient_thresh = 0.005)
     m2
     m2$sd_report
     tidy(m2, "ran_pars", conf.int = TRUE)
@@ -1240,8 +1265,8 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
 # Run with pmap -----
 
-# # index_list <- index_list[2, ]
-# pmap(index_list, calc_condition_indices)
+# index_list <- index_list[2, ]
+pmap(index_list, calc_condition_indices)
 
 # Run with furrr ----
 
