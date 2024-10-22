@@ -54,6 +54,7 @@ species_to_remove <- c(
   # "Slender Sole",
   "Curlfin Sole",
   # "Sand Sole",
+  "Sandpaper Skate",
   "Harlequin Rockfish",
   "Pacific Tomcod",
   "Pygmy Rockfish",
