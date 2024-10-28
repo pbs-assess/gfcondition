@@ -21,31 +21,6 @@ model_name1 <- "2024-09-w-pcod-before-10pyr"
 # model_name2 <- "2024-09-doy-ld0c"
 model_name2 <- "2024-09-doy-ld0c-w-pcod-before-10pyr"
 
-# species_to_plot <- species_list
-# set_name <- "all-"
-# fig_height <- 8*1.4
-# fig_width <- 10
-# set_ncol <- 5
-# set_legend_position <- c(0.6,0.06)
-
-# species_to_plot <- Flatfish
-# set_name <- "flatfish-"
-
-species_to_plot <- species_list[!(species_list %in% c(Rockfish,Flatfish))]
-set_name <- "other-"
-fig_height <- 5
-fig_width <- 8
-set_ncol <- 4
-set_legend_position <- c(0.75, 0.15)
-
-# species_to_plot <- Rockfish
-# set_name <- "rockfish-"
-# fig_height <- 4.5
-# fig_width <- 10
-# set_ncol <- 5
-# set_legend_position <- c(0.7, 0.1)
-
-
 
 f1 <- list.files(paste0("data-generated/cond-index/",
                         model_name1), pattern = ".rds", full.names = TRUE)
@@ -55,7 +30,7 @@ d1 <- purrr::map_dfr(f1, readRDS) |>
   # filter(!(species %in% c(Flatfish))) |>
   # filter(!(species %in% c(Flatfish, Rockfish))) |>
   # filter(species %in% Flatfish) |>
-  filter(species %in% species_to_plot) |>
+  # filter(species %in% species_to_plot) |>
   filter(!(species %in% species_to_remove)) |>
   mutate(species = ifelse(species == "Rougheye/Blackspotted Rockfish Complex",
                           "Rougheye/Blackspotted", species),
@@ -70,7 +45,6 @@ f2 <- list.files(paste0("data-generated/cond-index/",
                         model_name2), pattern = ".rds", full.names = TRUE)
 
 d2 <- purrr::map_dfr(f2, readRDS) |>
-  filter(species %in% species_to_plot) |>
   filter(!(species %in% species_to_remove)) |>
   mutate(species = ifelse(species == "Rougheye/Blackspotted Rockfish Complex",
                           "Rougheye/Blackspotted", species),
@@ -86,13 +60,47 @@ d1 <- d1 |> mutate(upr_trimmed = ifelse(upr > max_est, max_est, upr))
 d2 <- d2 |> mutate(upr_trimmed = ifelse(upr > max_est, max_est, upr))
 
 
+species_to_plot <- species_list
+# set_name <- "all-"
+# fig_height <- 8*1.4
+# fig_width <- 10
+# set_ncol <- 5
+# set_legend_position <- c(0.6,0.06)
+
+set_name <- "all-wide-"
+set_ncol <- 8
+set_legend_position <- c(0.75,0.08)
+fig_height <- 8
+fig_width <- 16
+
+species_to_plot <- Flatfish
+set_name <- "flatfish-"
+#
+species_to_plot <- species_list[!(species_list %in% c(Rockfish, Flatfish))]
+set_name <- "other-"
+#
+fig_height <- 4
+fig_width <- 10
+set_ncol <- 5
+set_legend_position <- "none"
+#
+species_to_plot <- Rockfish
+set_name <- "rockfish-"
+fig_height <- 5.5
+fig_width <- 12
+set_ncol <- 6
+# # set_legend_position <- c(0.7, 0.1)
+
 d1 |> bind_rows(d2)  |>
+  filter(species %in% species_to_plot) |>
+  filter(!(species== "Pacific Halibut")) |>
   ggplot( aes(year, est, fill = group)) +
   geom_hline(yintercept = 1,
              # linetype = "dotted",
              colour = "grey") +
   geom_line(aes(colour = group, linetype = model)) +
-  geom_ribbon(data = d1, aes(ymin = lwr, ymax = upr_trimmed, alpha = group)) +
+  geom_ribbon(data = filter(d1, species %in% species_to_plot & !(species== "Pacific Halibut")),
+              aes(ymin = lwr, ymax = upr_trimmed, alpha = group)) +
   # scale_y_log10() +
   facet_wrap(~species,
              scales = "free_y",
