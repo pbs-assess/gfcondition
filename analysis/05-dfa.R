@@ -1,6 +1,5 @@
 
 # devtools::install_github("fate-ewi/bayesdfa")
-
 library(tidyverse)
 library(bayesdfa)
 library(patchwork)
@@ -17,7 +16,7 @@ fig_width <- 5 * 2
 
 dir.create(paste0("figs/DFA/"), showWarnings = FALSE)
 dir.create(paste0("figs/man/"), showWarnings = FALSE)
-
+dir.create(paste0("data-generated/DFA/"), showWarnings = FALSE)
 ## Choose model ----
 ## DFA settings
 
@@ -30,11 +29,12 @@ dir.create(paste0("figs/man/"), showWarnings = FALSE)
 # ctrl <- list(adapt_delta = 0.95, max_treedepth = 12) # this works for imm not accounting for density
 # ctrl <- list(adapt_delta = 0.99, max_treedepth = 20) # default settings
 ctrl <- list(adapt_delta = 0.95, max_treedepth = 20)
-set_iter <- 8000 # min 2000
+set_iter <- 10000 # min 2000
 set_chains <- 5 # 1 works
-
-use_expansion_prior <- FALSE
-# # use_expansion_prior <- TRUE
+estimate_sigma <- FALSE
+unequal_sigma <- TRUE
+# use_expansion_prior <- FALSE
+# use_expansion_prior <- TRUE
 
 # ## choose response variable
 ## are we doing a DFA of biomass density rather than condition
@@ -50,25 +50,27 @@ trend_count <- 2
 
 no_covs <- TRUE
 # no_covs <- FALSE
+
 if(!no_covs) {
 obs_covs <- TRUE
 proc_covs <- FALSE
 }
 
-set_group <- "immatures"
-# set_group <- "mature males"
+# set_group <- "immatures"
+set_group <- "mature males"
 # set_group <- "mature females"
 
 if(no_covs) {
   if(adjusted_for_density){
   # model_name <- "apr-2024-not-total-density"
   # model_name <- "apr-2024-cell-means"
-    model_name <- "2024-09-doy-ld0c"
-    # use_expansion_prior <- TRUE
+    model_name <- "2024-09-doy-ld0c-w-pcod-before-10pyr"
   if(set_group == "immatures"){
     y_label <- "Immature condition indices (adjusting for density)"
+    # use_expansion_prior <- TRUE
+    # ctrl <- list(adapt_delta = 0.99, max_treedepth = 20)
     which_flip <- 0L
-    which_flip2 <- 2L
+    which_flip2 <- 0L
   }
   if(set_group == "mature males") {
     y_label <- "Mature male condition indices (adjusting for density)"
@@ -77,34 +79,39 @@ if(no_covs) {
   }
   if(set_group ==  "mature females") {
     y_label <- "Mature female condition indices (adjusting for density)"
-    which_flip <- 1L
+    which_flip <- 0L
     which_flip2 <- 2L
   }
   } else {
   # model_name <- "apr-2024"
-  model_name <- "2024-09"
+  model_name <- "2024-09-w-pcod-before-10pyr"
   if(set_group == "immatures") {
     y_label <- "Immature condition indices (not controlling for density)"
-    which_flip <- 0L
-    which_flip2 <- 2L
+    # use_expansion_prior <- TRUE # very bad!
+    # estimate_sigma <- TRUE # not needed with AR1
+    # unequal_sigma <- FALSE # not needed with AR1
+    which_flip <- 0L # only if estimating sigma
+    which_flip2 <- 0L # only if estimating sigma
   }
   if(set_group == "mature males") {
     y_label <- "Mature male condition indices (not controlling for density)"
-    use_expansion_prior <- FALSE
+    # use_expansion_prior <- TRUE
     which_flip <- 0L
     which_flip2 <- 2L
   }
   if(set_group ==  "mature females") {
     y_label <- "Mature female condition indices (not controlling for density)"
-    use_expansion_prior <- FALSE
-    which_flip <- 1L
-    which_flip2 <- 2L
+    # use_expansion_prior <- FALSE
+    which_flip <- 0L
+    which_flip2 <- 0L
   }
   }
   } else{
     # model_name <- "apr-2024"
-    model_name <- "2024-09"
+    model_name <- "2024-09-w-pcod-before-10pyr"
+    adjusted_for_density <- FALSE
   if(set_group == "immatures") {
+    # not converging at the moment
     y_label <- "Immature condition indices (biomass as observation covariate)"
     which_flip <- 0L
     which_flip2 <- 0L
@@ -112,7 +119,7 @@ if(no_covs) {
   if(set_group == "mature males") {
     y_label <- "Mature male condition indices (biomass as observation covariate)"
     which_flip <- 0L
-    which_flip2 <- 0L
+    which_flip2 <- 2L
   }
   if(set_group ==  "mature females") {
     y_label <- "Mature female condition indices (biomass as observation covariate)"
@@ -142,9 +149,9 @@ if(density){
     pattern = ".rds",
     full.names = TRUE)
 
-  d0 <- purrr::map_dfr(f, readRDS)
-
-  dg <- d0
+  d <- purrr::map_dfr(f, readRDS)
+  d <- filter(d, !(species %in% species_to_remove))
+  dg <- d
 
 } else{
   f <- list.files(paste0("data-generated/cond-index/",
@@ -152,22 +159,9 @@ if(density){
                   full.names = TRUE)
 
   d <- purrr::map_dfr(f, readRDS)
-
+  d <- filter(d, !(species %in% species_to_remove))
   dg <- filter(d, group == set_group)
 }
-
-
-# # ## remove species?
-# # # better convergence but weaker patterns?
-# species_to_remove <- c(
-#   #"Slender Sole",
-#   # "Curlfin Sole",
-#   # "Sand Sole",
-#   "Butter Sole" # samples only from HS and strange behaviour of RF
-#   )
-
-dg <- filter(dg, !(species %in% species_to_remove))
-# d0 <- filter(d0, !(species %in% species_to_remove))
 
 
 dg <- dg %>% mutate(
@@ -180,24 +174,43 @@ dg <- dg %>% mutate(
   )
 )
 
+### input spaghetti ----
 
+cols <- viridis::viridis(length(unique((d$species))), end = 0.8)
+(ps <- d |> group_by(species, group) |>
+    mutate(obs_scaled = (log_est-mean(log_est))/ sd(log_est),
+           group = factor(group, levels = c("immatures", "mature males", "mature females"),
+                          labels = c("Immatures", "Mature males", "Mature females"))
+           ) |>
+    ggplot() +
+    geom_line(aes(x = year, y = obs_scaled,
+                         color =species, group = species), linewidth = 0.5) +
+    scale_color_manual(values = cols) +
+    ylab(paste0(ifelse(
+      density, "Biomass index",
+      paste0("Scaled condition index ",
+             ifelse(adjusted_for_density,
+                    "(adjusting for density)","(not controlling for density)"))))
+      ) +
+    xlab("") +
+    # xlab("Time") +
+    theme(legend.position = "none",
+          plot.margin = unit(c(0.15, 0.15, 0.15, 0.15), "inches"))
+ )
 
-ggplot(d, aes(year, est)) + facet_wrap(~paste(species, group)) +
-  geom_line()
+if(!density){
+  ps + facet_wrap(~group, ncol = 1)
+}
 
-ggplot(d, aes(year, est, colour = species)) + facet_wrap(~group) +
-  geom_line()
+ggsave(paste0("figs/man/DFA-spaghetti-", model_name, ".png"),
+       height = fig_height*0.75, width = fig_width*0.5)
 
-ggplot(dg, aes(year, log_est)) +
-  facet_wrap(~paste(species, group)) +
-  geom_line()
-
-## wide dataframe structure
+### wide dataframe structure
 # dw <- tidyr::pivot_wider(dg, id_cols = c(year), names_from = species, values_from = est) |>
 #   select(-year) |> t()
 # dw
 
-## long dataframe structure
+### long dataframe structure  ----
 yrs <- sort(unique(dg$year))
 spp <- unique(dg$species)
 spp_grouped <- select(dg, species, taxa_group) %>% distinct()
@@ -216,41 +229,92 @@ dd <- tibble(
 
 saveRDS(dd, paste0(set_group, "-", model_name, "-condition-indices.rds"))
 
-# # put all condition indices on the same scale but not centred... not sure this makes sense?
-# dd <- dd %>% group_by(ts) %>%
-#   mutate(obs = (obs)/sd(obs))
+
 
 ## Weights ----
-range(dg$se)
-range(1/dg$se^2)
 
-# SD/weight not SD^2/weight in model code, so try
-# dd$weights <- 1 / (dd$se) # this is the SD
-# dd$weights_scaled <- dd$weights / mean(dd$weights)
-dd$weights <- (1 / dd$se)^2 # this would be the variance
+## could put all condition indices on the same scale but not centred...
+## not sure this makes sense?
+
+# but will scale the se to obs variability for each species
+dd <- dd %>% group_by(ts) %>%
+  mutate(mean_abs_obs = mean(abs(obs)),
+         obs_range = max(obs)-min(obs),
+         sd_obs = sd(obs),
+         se_scaled = se/sd(obs)
+  ) |> ungroup()
+
+
+dd$weights1 <- (1 / dd$se)^2 # this would be the variance
+dd$weights <- (1 / dd$se_scaled)^2 # this would be the variance
 # dd$weights_scaled <- (dd$weights / mean(dd$weights))
 dd$weights_scaled <- (dd$weights / sum(dd$weights))*100
-# dd$weights_scaled <- sqrt(dd$weights / mean(dd$weights)) # ruins effects
-# dd$weights_scaled <- dd$weights / median(dd$weights)
-# hist(dd$weights)
-# hist(dd$weights_scaled)
-mean(dd$weights_scaled)
-# ggplot(dd) + geom_point(aes(se, (weights_scaled)))
+dd$weights_scaled1 <- (dd$weights1 /sum(dd$weights1))*100
+dd$weights_scaled2 <- log(dd$weights +1)
+# ggplot(dd) + geom_point(aes(se, (weights_scaled1), colour = sd_obs))
+# plot(weights_scaled1~weights_scaled, data = dd)
 
-# DFA without a covariate ----
+
+# DFA: has model already been run ----
+
+# bayesdfa_config <- "lhw"
+# bayesdfa_config <- "lhw1-ar1"
+bayesdfa_config <- "w1-ar1" # works for imm
+# bayesdfa_config <- "w1"
+# bayesdfa_config <- "log(scaledSE)"
+# bayesdfa_config <- "none" # doesn't converge well at all
+
+if(density) {
+  file_name <- paste0("data-generated/DFA/",
+                      "total-biomass-",
+                      model_name,
+                      "-", set_chains, "chains",
+                      # "-", use_expansion_prior,
+                      # "-", set_iter,
+                      "-", trend_count,
+                      "-", bayesdfa_config,
+                      ".rds")
+} else {
+  if(no_covs){
+    file_name <- paste0("data-generated/DFA/",
+                        gsub(" ", "-", set_group),
+                        "-", model_name,
+                        "-", set_chains, "chains",
+                        "-", trend_count,
+                        "-", bayesdfa_config,
+                        ".rds")
+  } else {
+  file_name <- paste0("data-generated/DFA/Obscov-",
+                    gsub(" ", "-", set_group),
+                    "-", model_name,
+                    "-", set_chains, "chains",
+                    # "-", use_expansion_prior,
+                    # "-", set_iter,
+                    "-", trend_count,
+                    "-", bayesdfa_config,
+                    ".rds")
+  }
+}
+rm(m)
+try(m <- readRDS(file_name))
+
+if (!exists("m")) {
 if(no_covs){
+# DFA without a covariate ----
 m <- fit_dfa(
   y = dd,
   iter = set_iter,
   chains = set_chains,
   num_trends = trend_count,
-  inv_var_weights = "weights_scaled",
-  # estimate_process_sigma = TRUE, # not default
-  # equal_process_sigma = FALSE, # not default
+  inv_var_weights = "weights_scaled1",
+  # likelihood_weights = "weights_scaled2",
+  estimate_trend_ar = TRUE,
+  # estimate_process_sigma = estimate_sigma, # helps for imm
+  # equal_process_sigma = equal_sigma,
   estimate_nu = FALSE,
   scale = "zscore",
   data_shape = "long",
-  expansion_prior = use_expansion_prior,
+  # expansion_prior = use_expansion_prior,
   # seed = 298191,
   seed = 298,
   control = ctrl
@@ -312,10 +376,12 @@ m <- fit_dfa(
   # chains = 1,
   # num_trends = 2,
   iter = set_iter,
-  chains = set_chains,
+  chains = 1,
   num_trends = trend_count,
-  inv_var_weights = "weights_scaled",
-  estimate_process_sigma = FALSE,
+  estimate_trend_ar = TRUE,
+  inv_var_weights = "weights_scaled1",
+  # likelihood_weights = "weights_scaled",
+  # estimate_process_sigma = FALSE,
   estimate_nu = FALSE,
   scale = "zscore",
   obs_covar = obs_cov,
@@ -331,8 +397,11 @@ m <- fit_dfa(
     ### TODO: not added yet
   }
 }
+}
 
 # Model diagnostics ----
+# mi <- invert_chains(m$model)
+# is_converged(mi, threshold = 1.1)
 is_converged(m, threshold = 1.1)
 
 # library(bayesplot)
@@ -346,52 +415,30 @@ is_converged(m, threshold = 1.1)
 # range(m$monitor$Bulk_ESS)
 # range(m$monitor$Rhat)
 # row.names(m$monitor)
-#
-# mi <- invert_chains(m$model)
-# is_converged(mi)
 
-checks <- m$monitor |> filter(Rhat >1.1|Bulk_ESS<400|Tail_ESS<400) |> as_tibble(rownames = "var")
+checks <- m$monitor |>
+  filter(Rhat >1.1|Bulk_ESS<300|Tail_ESS<300) |>
+  as_tibble(rownames = "var")
 checks |> View()
-
-r <- rotate_trends(m)
-plot_loadings(r) + scale_y_continuous(limits = c(-2,2))
-
-
-
-# Posthoc covariate tests -----
-
-if(nrow(checks)<2) {
-# immature not converging at all with density!
-
 # xstar are random walk trends 1 year forecasting in the future so can be ignored
-# xstar[2,1] isn't estimating well for males with density
-# xstar[1,1] isn't estimating well for both mature sexes with density
 
-r <- rotate_trends(m)
+# r <- rotate_trends(m)
+# plot_loadings(r) + scale_y_continuous(limits = c(-2,2))
 
-# label_yrs <- function(x, yrs) {
-#   x + yrs[1] - 1
-# }
-
-plot_trends(r) + scale_x_continuous(label = label_yrs )
-
-plot_loadings(r, names = spp) +
-  ggtitle(paste0("DFA for ", set_group, " with no covariates"))
-
-flip_trend <- function(rotated_modelfit, trend = 1L) {
-  rflip <- rotated_modelfit
-  rflip$trends_mean[trend,] <- -1 * rotated_modelfit$trends_mean[trend,]
-  rflip$trends_lower[trend,] <- -1 * rotated_modelfit$trends_lower[trend,]
-  rflip$trends_upper[trend,] <- -1 * rotated_modelfit$trends_upper[trend,]
-  for (i in seq_len(dim(rotated_modelfit$Z_rot)[1])) {
-    rflip$Z_rot[i,,trend] <- -1 * rotated_modelfit$Z_rot[i,,trend]
-    rflip$trends[i,,trend] <- -1 * rotated_modelfit$trends[i,,trend]
+# only save if converged
+if(nrow(checks)<22) {
+  if(no_covs&!density){
+    saveRDS(m, file_name)
   }
-  rflip
 }
 
-plot_loadings(r, names = spp)
-# plot_trends(r, years = yrs)
+# Posthoc covariate tests -----
+if(nrow(checks)<22) {
+r <- rotate_trends(m)
+
+# plot_trends(r) + scale_x_continuous(label = label_yrs )
+# plot_loadings(r, names = spp) +
+#   ggtitle(paste0("DFA for ", set_group, " with no covariates"))
 
 if(which_flip == 0L) {
   rflip <- r
@@ -404,6 +451,7 @@ plot_trends(r, years = yrs)
 plot_trends(rflip, years = yrs)
 plot_loadings(rflip, names = spp)
 
+# Biomass trend plots ----
 if(density) {
 
 (p1 <- plot_trends(rflip) +
@@ -426,7 +474,10 @@ if(density) {
     ggtitle(paste0("DFA of biomass indices"))
 )
 
-(p2 <- plot_loadings(rflip, names = spp)+
+(p2 <- plot_loadings(rflip, names = spp,
+                     conf_level = 0.90,
+                     ordered_by = 2,
+                     flip_order = TRUE)+
     # scale_fill_manual(values = RColorBrewer::brewer.pal(n = 6, name = "Paired")[c(6,2)]) +
     scale_fill_manual(values = c("grey20","grey20")) +
     guides(alpha=guide_legend(override.aes = list(fill = "grey20")),
@@ -440,15 +491,11 @@ wrap_elements(p1) + p2 + plot_layout(ncol = 2)
 
 ggsave("figs/DFA-tends-total.png", width = 8, height = 5)
 
-}
+} else {
 
-# DFA fit plot ----
-
-# plot_fitted(m2, names = spp)
-
+# DFA fit plots ----
 source("R/dfa_fitted.R")
 df1 <- dfa_fitted(m, conf_level = 0.95, names = spp)
-# cols <- viridis::viridis(length(unique((df$ID))), end = 0.8)
 
 (pf <- ggplot(df1) +
     geom_ribbon(aes(x = time,
@@ -496,58 +543,46 @@ ggsave(paste0("figs/man/DFA-fits-",  trend_count,
 # TODO: need a more systematic way to decide which covars to use
 
 
-# Select 2 covariates ----
+# Correlations by trend ----
+    pro_covar1 <- sst0
+  # # pro_covar1 <- pt0
+  # # pro_covar1 <- pp0  # mat?
+  # # pro_covar1 <- pdo1
+  # # pro_covar1 <- pdo0   #* imm & mat
+  # # pro_covar1 <- pink1
+  # # pro_covar1 <- npi0   #~
+  # # pro_covar1 <- oni0
+  # # pro_covar1 <- oni1
+  # # pro_covar1 <- soi0
+  # pro_covar1 <- sst0   #* imm 3
+  # # pro_covar1 <- tob0
+  # # pro_covar1 <- o20
+  # # pro_covar1 <- so20   #*
 
-  # pro_covar1 <- pt0 |>
-  # pro_covar1 <- pp0 |> # mat?
-  # pro_covar1 <- pdo1 |>
-  # pro_covar1 <- pdo0 |> #* imm & mat
-  # pro_covar1 <- pink1 |>
-  # pro_covar1 <- npi0 |> #~
-  # pro_covar1 <- oni0 |>
-  # pro_covar1 <- oni1 |>
-  # pro_covar1 <- soi0 |>
-  pro_covar1 <- sst0 |> #* imm 3
-  # pro_covar1 <- tob0 |>
-  # pro_covar1 <- o20 |>
-  # pro_covar1 <- so20 |> #*
-  mutate(trend_number = "Trend 1",
-         Variable = type
-  ) |>
-  select(-year, -type)|>
-  as.data.frame(stringsAsFactors = FALSE)
 
 if(set_group == "total"){
-  pro_covar1 <- tob0 |>
-  #   # pro_covar1 <- tob1 |>
-  # pro_covar1 <- sst0 |>
-    # pro_covar1 <- sst1 |>
-  # pro_covar1 <- o20 |>
-  # pro_covar1 <- so20 |> #*
-  mutate(trend_number = "Trend 1",
-         Variable = type
-  ) |>
-  select(-year, -type)|>
-  as.data.frame(stringsAsFactors = FALSE)
+  pro_covar1 <- tob0
+  # pro_covar1 <- tob1
+  # pro_covar1 <- sst0
+  # pro_covar1 <- sst1
+  # pro_covar1 <- o20
+  # pro_covar1 <- so20
 }
 
 # if(set_group == "mature females"){
-#     # pro_covar1 <- tob0 |>
-#     # pro_covar1 <- pdo0|>
-#     pro_covar1 <- sst0 |>
-#     # pro_covar1 <- o20 |>
-#   # pro_covar1 <- pt0 |>
-#   # pro_covar1 <- pp0 |> #
-#     # pro_covar1 <- so20 |> #*
-#   # pro_covar1 <- npi0 |> #~
-#   # pro_covar1 <- oni0 |>
-#   # pro_covar1 <- soi0 |>
-#     mutate(trend_number = "Trend 1",
-#            Variable = type
-#     ) |>
-#     select(-year, -type)|>
-#     as.data.frame(stringsAsFactors = FALSE)
+#   # pro_covar1 <- tob0
+#   # pro_covar1 <- pdo0
+#   pro_covar1 <- sst0
+#   # pro_covar1 <- o20
+#   # pro_covar1 <- pt0
+#   # pro_covar1 <- pp0   #
+#   # pro_covar1 <- so20   #*
+#   # pro_covar1 <- npi0   #~
+#   # pro_covar1 <- oni0
+#   # pro_covar1 <- soi0
 # }
+
+pro_covar1 <- format_process_cov(pro_covar1)
 
 correlation <- trend_cor(r, pro_covar1$value,
                          time_window = seq_len(max(pro_covar1$time)),
@@ -562,53 +597,37 @@ cor1 <- as.data.frame(correlation)
 # hist(correlation_f)
 
 
- pro_covar1b <- pdo0 |> # mat
- # pro_covar1b <- oni0 |> # mat
-    # pro_covar1b <- so20 |> #*imm
-  # pro_covar1b <- npi0 |>
-  # pro_covar1b <- soi0 |>
-  # pro_covar1b <- sst0 |>
-  # pro_covar1b <- so20 |>
-  # pro_covar1b <- pp0 |>
-  # pro_covar1b <- tob0 |>
-  # pro_covar1b <- o20 |>
-    mutate(trend_number = "Trend 1",
-         # value = (value - mean(value))/ sd(value),
-         Variable = type
-  ) |>
-  select(-year, -type)|>
-  as.data.frame(stringsAsFactors = FALSE)
+  pro_covar1b <- pdo0 # mat
+  # pro_covar1b <- oni0   # mat
+  # pro_covar1b <- so20   #*imm
+  # pro_covar1b <- npi0
+  # pro_covar1b <- soi0
+  # pro_covar1b <- sst0
+  # pro_covar1b <- so20
+  # pro_covar1b <- pp0
+  # pro_covar1b <- tob0
+  # pro_covar1b <- o20
 
   if(set_group == "total"){
-    # pro_covar1b <- pdo0 |> # mat
-      # pro_covar1b <- pdo1 |> # mat
-      # pro_covar1b <- tob0 |>
-    pro_covar1b <- o20 |>
-      mutate(trend_number = "Trend 1",
-             # # value = (value - mean(value))/ sd(value),
-             Variable = type
-      ) |>
-      select(-year, -type)|>
-      as.data.frame(stringsAsFactors = FALSE)
+    # pro_covar1b <- pdo0   # mat
+      # pro_covar1b <- pdo1   # mat
+      # pro_covar1b <- tob0
+    pro_covar1b <- o20
   }
 
  if(set_group == "mature females"){
-   # pro_covar1b <- tob0 |>
-   pro_covar1b <- pp1 |>
-     # pro_covar1b <- sst0 |>
-     # pro_covar1b <- o20 |>
-     # pro_covar1b <- so20 |> #*
-   # pro_covar1b <- pdo0 |> #*
-   # pro_covar1b <- npi0 |> #~
-   # pro_covar1b <- oni0 |>
-   # pro_covar1b <- soi0 |>
-     mutate(trend_number = "Trend 1",
-            Variable = type
-     ) |>
-     select(-year, -type)|>
-     as.data.frame(stringsAsFactors = FALSE)
+   # pro_covar1b <- tob0
+   pro_covar1b <- pp1
+     # pro_covar1b <- sst0
+     # pro_covar1b <- o20
+     # pro_covar1b <- so20   #*
+   # pro_covar1b <- pdo0   #*
+   # pro_covar1b <- npi0   #~
+   # pro_covar1b <- oni0
+   # pro_covar1b <- soi0
  }
 
+pro_covar1b <- format_process_cov(pro_covar1b)
 correlation <- trend_cor(r, pro_covar1b$value,
                          time_window = seq_len(max(pro_covar1b$time)),
                          trend = 1, trend_samples = 1000)
@@ -620,78 +639,55 @@ covarsb <- pro_covar1b
 
 if(trend_count>1){
 
-  # pro_covar2 <- pt0 |>
-  # pro_covar2 <- pp0 |> #~ males and imm
-  # pro_covar2 <- pink1 |>
-  # pro_covar2 <- sst0 |> # females
-  # pro_covar2 <- tob0 |> #~
-  pro_covar2 <- o20 |>
-  # pro_covar2 <- so20 |>
-  mutate(trend_number = "Trend 2",
-         # value = (value - mean(value))/ sd(value),
-         Variable = type
-  ) |>
-  select(-year, -type)|>
-  as.data.frame(stringsAsFactors = FALSE)
+  # pro_covar2 <- pt0
+  # pro_covar2 <- pp0   #~ males and imm
+  # pro_covar2 <- pink1
+  # pro_covar2 <- sst0   # females
+  # pro_covar2 <- tob0   #~
+  pro_covar2 <- o20
+  # pro_covar2 <- so20
 
   if(set_group == "mature females"){
-      # pro_covar2 <- pt0 |>
-      pro_covar2 <- pdo0 |> #~ males and imm
-      # # pro_covar2 <- pp0 |> #~ males and imm
-      # pro_covar2 <- sst0 |> # females
-      # # pro_covar2 <- tob0 |> #~
-      # pro_covar2 <- o20 |>
-      # pro_covar2 <- so20 |>
-      mutate(trend_number = "Trend 2",
-             # value = (value - mean(value))/ sd(value),
-             Variable = type
-      ) |>
-      select(-year, -type)|>
-      as.data.frame(stringsAsFactors = FALSE)
+      # pro_covar2 <- pt0
+      pro_covar2 <- pdo0   #~ males and imm
+      # # pro_covar2 <- pp0   #~ males and imm
+      # pro_covar2 <- sst0   # females
+      # # pro_covar2 <- tob0   #~
+      # pro_covar2 <- o20
+      # pro_covar2 <- so20
   }
 
+  pro_covar2 <- format_process_cov(pro_covar2, trend_title = "Trend 2")
   correlation <- trend_cor(r, pro_covar2$value,
                            time_window = seq_len(max(pro_covar2$time)),
                            trend = 2, trend_samples = 1000)
   hist(correlation)
-  # (mpp <- mean(correlation))
   cor2 <- as.data.frame(correlation)
 
 
-  # pro_covar2b <- pt0 |> # imm and males
-  pro_covar2b <- pp0 |>
-    # pro_covar2b <- pink1 |>
-  # pro_covar2b <- sst0 |>
-  # pro_covar2b <- tob0 |> # males
-  # pro_covar2b <- so20 |> # females
-    mutate(trend_number = "Trend 2",
-           # # value = (value - mean(value))/ sd(value),
-           Variable = type
-    ) |>
-    select(-year, -type)|>
-    as.data.frame(stringsAsFactors = FALSE)
+  # pro_covar2b <- pt0   # imm and males
+  pro_covar2b <- pp0
+    # pro_covar2b <- pink1
+  # pro_covar2b <- sst0
+  # pro_covar2b <- tob0   # males
+  # pro_covar2b <- so20
 
   if(set_group == "mature females"){
-    # pro_covar2b <- pdo1 |>
-      # pro_covar2b <- pp0 |>
-        pro_covar2b <- o2p0 |>
-      # pro_covar2b <- sst1 |>
-      # pro_covar2b <- tob1 |> # males
-      # pro_covar2b <- so20 |> # females
-      # pro_covar2b <- oni0 |> # females
-      mutate(trend_number = "Trend 2",
-             # # value = (value - mean(value))/ sd(value),
-             Variable = type
-      ) |>
-      select(-year, -type)|>
-      as.data.frame(stringsAsFactors = FALSE)
+    # pro_covar2b <- pdo1
+      # pro_covar2b <- pp0
+        pro_covar2b <- o2p0
+      # pro_covar2b <- sst1
+      # pro_covar2b <- tob1   # males
+      # pro_covar2b <- so20   # females
+      # pro_covar2b <- oni0
   }
+
+  pro_covar2b <- format_process_cov(pro_covar2b, trend_title = "Trend 2")
   correlation <- trend_cor(r, pro_covar2b$value,
                            time_window = seq_len(max(pro_covar2b$time)),
                            trend = 2, trend_samples = 1000
                            )
   hist(correlation)
-  # (mpp <- mean(correlation))
   cor2b <- as.data.frame(correlation)
 
   covars <- bind_rows(pro_covar1, pro_covar2, pro_covar1b, pro_covar2b)
@@ -707,45 +703,34 @@ if(trend_count>1){
 
 if(trend_count>2){
 
-  pro_covar3 <- pdo0 |> # imm
-  # pro_covar3 <- pt0 |>
-  # pro_covar3 <- pp0 |> #~ males and imm
-  # pro_covar3 <- sst0 |> # females
-    # pro_covar3 <- tob0 |> #~
-    # pro_covar3 <- o20 |>
-    # pro_covar3 <- so20 |>
-    mutate(trend_number = "Trend 3",
-           # value = (value - mean(value))/ sd(value),
-           Variable = type
-    ) |>
-    select(-year, -type)|>
-    as.data.frame(stringsAsFactors = FALSE)
+  pro_covar3 <- pdo0   # imm
+  # pro_covar3 <- pt0
+  # pro_covar3 <- pp0   #~ males and imm
+  # pro_covar3 <- sst0   # females
+  # pro_covar3 <- tob0   #~
+  # pro_covar3 <- o20
+  # pro_covar3 <- so20
+
+  pro_covar3 <- format_process_cov(pro_covar3, trend_title = "Trend 3")
 
   correlation <- trend_cor(r, pro_covar3$value,
                            time_window = seq_len(max(pro_covar3$time)),
                            trend = 3, trend_samples = 1000)
   hist(correlation)
-  # (mpp <- mean(correlation))
   cor3 <- as.data.frame(correlation)
 
-  pro_covar3b <- oni0 |> # imm
-  # pro_covar3b <- pt0 |> # imm and males
-  # pro_covar3b <- pp0 |>
-  # pro_covar3b <- sst0 |>
-  # pro_covar3b <- tob0 |> # males
-  # pro_covar3b <- so20 |> # females
-    mutate(trend_number = "Trend 3",
-           # # value = (value - mean(value))/ sd(value),
-           Variable = type
-    ) |>
-    select(-year, -type)|>
-    as.data.frame(stringsAsFactors = FALSE)
+  pro_covar3b <- oni0   # imm
+  # pro_covar3b <- pt0   # imm and males
+  # pro_covar3b <- pp0
+  # pro_covar3b <- sst0
+  # pro_covar3b <- tob0   # males
+  # pro_covar3b <- so20
 
+  pro_covar3b <- format_process_cov(pro_covar3b, trend_title = "Trend 3")
   correlation <- trend_cor(r, pro_covar3b$value,
                            time_window = seq_len(max(pro_covar3b$time)),
                            trend = 3, trend_samples = 1000)
   hist(correlation)
-  # (mpp <- mean(correlation))
   cor3b <- as.data.frame(correlation)
 
   covars <- bind_rows(pro_covar1, pro_covar2, pro_covar1b,
@@ -763,7 +748,6 @@ if(trend_count>2){
 
 }
 
-
 if(which_flip == 1L) {
   cor1$correlation <- -cor1$correlation
   cor1b$correlation <- -cor1b$correlation
@@ -774,11 +758,6 @@ cor1b$var <- pro_covar1b$Variable[1]
 
 cor1$Label <- cor1b$Label <- paste0("Trend 1 ~ ", pro_covar1b$Variable[1], " or ", pro_covar1$Variable[1])
 correlations <- bind_rows(cor1, cor1b)
-
-# correlations$var <- factor(correlations$var, levels = c(
-#   pro_covar1b$Variable[1],
-#   pro_covar1$Variable[1]
-#   ))
 
 if(trend_count>1){
   if(which_flip == 2L|which_flip2 == 2L) {
@@ -839,7 +818,7 @@ if(trend_count>2){
           legend.text=element_text(size=rel(0.8))) +
     # ggtitle(paste0("DFA of ", set_group, " with no covariates"))
     ggtitle(paste0("DFA of ", y_label, ""),
-            subtitle = paste0("    Species condition index ~ Trend1 x Loading1 + Trend2 x Loading2 + noise"))
+            subtitle = paste0("    Species condition index ~ Trend1 x Loading1 + Trend2 x Loading2 + Noise"))
   )
 
 mixed_set <- c(10,6,4,1)
@@ -903,34 +882,36 @@ if(trend_count>1){
 }
 }
 
-(p3 <- plot_loadings(rflip, names = spp)+
+(p3 <- plot_loadings(rflip,
+                     # violin = FALSE,
+                     conf_level = 0.90,
+                     ordered_by = 1,
+                     flip_order = TRUE,
+                     names = spp)+
     guides(alpha=guide_legend(override.aes = list(fill = "grey20")),
            fill = "none") +
+    scale_colour_manual(values = c(rep("black", trend_count)))+
+    scale_fill_manual(values = c(rep("black", trend_count)))+
     labs(alpha = "Prob not 0") +
-    scale_y_continuous(limits = c(-2,2)) +
+    scale_y_continuous(limits = c(-2.1,2.1)) +
     theme(legend.position = "none",
           axis.title.y = element_blank()) )
 
 if(trend_count>2){
   (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 6, name = "Paired")[c(5,4,2)]))
 } else {
+  (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,3)]])+
+     scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,3)]]))
   if(set_group == "mature females"){
-  (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set2[c(2,4)]]))
-  }else{
-    if(pro_covar1$Variable[1]=="TOB (previous year)"|pro_covar1$Variable[1]=="TOB"){
-      (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 6, name = "Paired")[c(6,4)]) )
-    } else {
-      # pro_covar1b$Variable[1]=="ENSO (ONI)"
-      # (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[c(9,10,3,4)]) )
-      if(set_group == "immatures"){
-        (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(1,3)]]))
-      } else {
-    (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,4)]]))
-      }
-    }
+  (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set2[c(2,4)]])+
+     scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set2[c(2,4)]]))
+  }
+  if(set_group == "mature males" #& no_covs
+     ){
+    (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,4)]])+
+       scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,4)]]))
   }
 }
-
 
 # wide version for talks
 if(trend_count>2){
@@ -947,7 +928,9 @@ if(trend_count>2){
                   gsub(" ", "-", set_group), "-", model_name, "-",
                   gsub(" ", "-", pro_covar1$Variable[1]), "-",
                   gsub(" ", "-", pro_covar2$Variable[1]),
-                  gsub(" ", "-", pro_covar3$Variable[1]), "-filtered.png"),
+                  gsub(" ", "-", pro_covar3$Variable[1]), "-",
+                  bayesdfa_config,
+                  ".png"),
            height = fig_height/1.65, width = fig_width)
 }else{
   if(trend_count>1){
@@ -955,19 +938,20 @@ if(trend_count>2){
                   no_covs, "-",
               gsub(" ", "-", set_group), "-", model_name, "-",
               gsub(" ", "-", pro_covar1$Variable[1]), "-",
-              gsub(" ", "-", pro_covar2$Variable[1]), "-filtered.png"),
+              gsub(" ", "-", pro_covar2$Variable[1]), "-", bayesdfa_config, ".png"),
        height = fig_height/1.55, width = fig_width*1)
 
  } else {
 ggsave(paste0("figs/DFA-", trend_count, "trends-no-cov-",
               no_covs, "-",
               gsub(" ", "-", set_group), "-", model_name, "-",
-              gsub(" ", "-", pro_covar1$Variable[1]), "-filtered.png"),
+              gsub(" ", "-", pro_covar1$Variable[1]), "-", bayesdfa_config, ".png"),
        height = fig_height/1.65, width = fig_width*0.9)
 }
 }
 
-manuscript_ready <- FALSE
+# manuscript_ready <- FALSE
+manuscript_ready <- TRUE
 if(manuscript_ready) {
 # tall version for manuscript
 wrap_elements(p1 / p2 + plot_layout(nrow = 2, widths= c(1), heights = c(1,0.7))& theme(
@@ -1007,11 +991,9 @@ if(trend_count>2){
            height = fig_height*1.1, width = fig_width/1.5)
   }
 }
-
 }
-
 }
-
+}
 
 # # # spaghetti
 # (p5 <- ggplot(df) +
@@ -1071,36 +1053,24 @@ if(trend_count>2){
   # ggtitle(paste0("DFA for ", set_group, " with ", lag_label, agg_var, var_type))
 #
 # # plot_fitted(m2, names = spp)
-# df2 <- dfa_fitted(mcov, conf_level = 0.95, names = unique(dd$ts))
-# cols <- viridis::viridis(length(unique((df$ID))), end = 0.8)
-#
-# # # # spgehetti
-# # (p1 <- ggplot(df) +
-# #     geom_line(aes_string(x = "time", y = "y", group = "ID"),
-# #               color = "grey50", linewidth = 0.5) +
-# #     geom_line(aes_string(x = "time", y = "estimate",
-# #                          group = "ID", color = "ID"), linewidth = 1.2) +
-# #     scale_color_manual(values = cols) +
-# #     xlab("Time") # + theme(legend.position = "none")
-# # )
-#
+
 # (p2 <- ggplot(df2) +
 #     geom_ribbon(aes_string(x = "time",
 #                            ymin = "lower", ymax = "upper", fill = "ID"),
 #                 alpha = 0.4) +
 #     geom_line(aes_string(x = "time", y = "estimate", colour = "ID")) +
-#     geom_line(data = pro_covar, aes_string(x = "time", y = "value"), colour = "red") +
+#     # geom_line(data = pro_covar, aes_string(x = "time", y = "value"), colour = "red") +
 #     geom_point(aes_string(x = "time", y = "y"),
 #                #col = "blue",
 #                size = 0.5, alpha = 0.7) +
-#     scale_color_manual(values = cols) +
-#     scale_fill_manual(values = cols) +
+#     # scale_color_manual(values = cols) +
+#     # scale_fill_manual(values = cols) +
 #     facet_wrap("ID" #, scales = "free_y"
 #                ) +
 #     xlab("Time") + ylab(y_label) +
-#     theme(legend.position = "none") +
+#     theme(legend.position = "none")
 #     # labs(colour= "Species", fill = "Species")+
-#     ggtitle(paste0("DFA with ",  trend_label, " and ", lag_label, agg_var, var_label))
+#     # ggtitle(paste0("DFA with ",  trend_label, " and ", lag_label, agg_var, var_label))
 # )
 #
 # ggsave(paste0("figs/DFA-",  trend_count, "trends-lag", set_lag, "-", agg_var, var_type, ".png"),
