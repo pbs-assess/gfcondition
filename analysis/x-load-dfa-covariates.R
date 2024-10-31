@@ -8,6 +8,17 @@ theme_set(ggsidekick::theme_sleek())
 # check that this matches current range for condition indices?
 yrs <- 2002:2024
 
+npgo0 <- npgo |>
+  filter(month %in% c(1,2,3,4,5,6)) |> # not sure why 7 was included before?
+  group_by(year) |> summarise(value = mean(anomaly, na.rm = TRUE)) |>
+  filter(year %in% yrs, !is.na(value)) |>
+  mutate(time = seq_along(year),
+         value_raw = value,
+         value = (value - mean(value))/ sd(value),
+         type = "NPGO")
+hist(npgo0$value)
+
+
   # load("data-raw/npi_monthly.rda")
   npi0 <- npi_monthly |>
     filter(month %in% c(1,2,3,4,5,6)) |> # not sure why 7 was included before?
@@ -290,14 +301,17 @@ yrs <- 2002:2024
   hist(pink1$value)
 
 
-  ev1 <- bind_rows(pdo0, oni0, npi0, soi0) |>
-    mutate(type = factor(type, levels = c("ENSO (ONI)", "PDO", "NPI", "SOI"))) %>%
+  ev1 <- bind_rows(pdo0, oni0, npgo0#, npi0
+                   ) |>
+    mutate(type = factor(type, levels = c("ENSO (ONI)", "PDO", "NPGO", "NPI"))) %>%
     ggplot() +
     geom_line(aes(time, value, colour = type), alpha = 0.7, linewidth = 1) +
     # geom_point(aes(time, value, colour = type), size = 2) +
     # scale_color_viridis_d()+
     # scale_color_brewer(palette = "Paired")+
-    scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[c(9,10,7,8)]) +
+    scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[c(9,10,1
+                                                                                     #,8
+                                                                                     )]) +
     scale_x_continuous(limits = c(0, 24),label = label_yrs ) +
     theme(
       axis.title = element_blank(),
@@ -332,7 +346,8 @@ yrs <- 2002:2024
   ev2
 
   ev3 <- bind_rows(pp0,  #pt0,
-                   so20, o20#, pink1, pink2
+                   # so20,
+                   o20#, pink1, pink2
   ) |>
     #mutate(type = factor(type, levels = c("ENSO (ONI)", "PDO", "NPI", "SOI"))) %>%
     ggplot() +
@@ -341,7 +356,8 @@ yrs <- 2002:2024
     # scale_color_viridis_d()+
     # scale_color_brewer(palette = "Paired")+
     scale_colour_manual(values = RColorBrewer::brewer.pal(n = 12, name = "Paired")[c(1,#3,
-                                                                                     4,2#6,5,
+                                                                                     4#,2
+                                                                                     #6,5,
     )])  +
     scale_x_continuous(limits = c(0, 24), label = label_yrs ) +
     theme(
