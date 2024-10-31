@@ -8,11 +8,11 @@ library(gfplot)
 # load overall species list
 source("analysis/00-species-list.R")
 
-# species_list <- list(
+species_list <- list(
 # "Sablefish"
 # "North Pacific Spiny Dogfish"
-# "Pacific Halibut"
-# )
+"Pacific Halibut"
+)
 
 # species_list <- list(species = species_list[27:length(species_list)])
 species_list <- list(species = species_list)
@@ -41,6 +41,11 @@ filter(!is.na(longitude), !is.na(latitude),
   ## because this survey is at different time of year than all the others
   dat <- filter(dat, !(survey_abbrev %in% c("SABLE")))
 # }
+  # temporary fix for IPHC because of sample size imbalance over time and
+  # uncertainty about how weight was measured
+  if(species == "Pacific Halibut"){
+    dat <- filter(dat, survey_abbrev != "IPHC FISS")
+  }
 
 
 check_for_duplicates <- dat[duplicated(dat$specimen_id), ]

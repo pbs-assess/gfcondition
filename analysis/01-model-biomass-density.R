@@ -172,6 +172,7 @@ fit_all_distribution_models <- function(species, only_sampled) {
   }
 
   # if (species == "Pacific Halibut") {
+  ## age at 50% lowered to 10.3 years according to histology
   #   # Takada 2017 for females, males less precise.. btw 70-79
   #   # no accurate values for males available so wont use for now
   #   custom_length_threshold <- c(70, 96.7)

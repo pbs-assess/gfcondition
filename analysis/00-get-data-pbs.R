@@ -135,6 +135,9 @@ species_code = "614",
 species_common_name = "pacific halibut"
 )
 
+# however weights are only available for 2022 and 2023
+filter(iphc, !is.na(weight)) |> group_by(year) |> summarise(n=n())
+
 # for condition model (inclusive of those for density models)
 surveys_included <- c("HBLL OUT N", "HBLL OUT S",
                       "IPHC FISS",
@@ -254,6 +257,16 @@ dsamp |> group_by(species_common_name, survey_series_id) |>
 dset |> group_by(species_common_name, survey_series_id) |>
   summarise(n = n(),
             events = length(unique(paste0(fishing_event_id, skate_id)))) |> View()
+
+filter(dset, species_common_name == "pacific cod") |>
+  group_by(survey_abbrev) |>
+  summarise(n = n(),
+            min_year = min(year, na.rm = TRUE),
+            max_year = max(year, na.rm = TRUE),
+            min_depth = min(depth_m, na.rm = TRUE),
+            max_depth = max(depth_m, na.rm = TRUE),
+            events = length(unique(paste0(fishing_event_id, skate_id)))) |> View()
+
 ### check which species are measured by IPHC
 ### just figured out how to add halibut data direct from IPHC ... halibut should be rerun
 d <- dsamp |> filter(!is.na(length), survey_abbrev == "IPHC FISS") |>

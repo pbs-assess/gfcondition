@@ -10,7 +10,7 @@ source("analysis/00-species-list.R")
 
 # # # # or override with custom subset
 # species_list <- list(
-# # "North Pacific Spiny Dogfish",
+# "North Pacific Spiny Dogfish"
 # # "Pacific Ocean Perch",
 # # "Pacific Cod",
 # # "Walleye Pollock",
@@ -50,7 +50,7 @@ source("analysis/00-species-list.R")
 # )
 
 index_list <- expand.grid(species = species_list,
-                          maturity = c(# "imm",
+                          maturity = c("imm",
                                        "mat"),
                           males = c(TRUE,
                                     FALSE)
@@ -61,13 +61,13 @@ index_list <- expand.grid(species = species_list,
   ) %>%
   distinct()
 
-index_list$add_density <- FALSE
-# index_list$add_density <- TRUE
+# index_list$add_density <- FALSE
+index_list$add_density <- TRUE
 
-# do both density agnostic and dependent versions
-index_list2 <- index_list
-index_list2$add_density <- TRUE
-index_list <- bind_rows(index_list, index_list2)
+# # do both density agnostic and dependent versions
+# index_list2 <- index_list
+# index_list2$add_density <- TRUE
+# index_list <- bind_rows(index_list, index_list2)
 
 # Function for generating condition indices ----
 
@@ -84,8 +84,8 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   # stop_early <- TRUE
   stop_early <- FALSE
 
-  min_yr_count <- 10 # current main folder, hasn't been run with density yet
-  # min_yr_count <- NULL
+  # min_yr_count <- 10 # current main folder, hasn't been run with density yet
+  min_yr_count <- NULL
 
   # add_density <- FALSE
   # add_density <- TRUE
@@ -360,6 +360,12 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     saveRDS(d2, f)
   } else {
     d2 <- readRDS(f)
+  }
+
+  # temporary fix for IPHC because of sample size imbalance over time and
+  # uncertainty about how weight was measured
+  if(species == "Pacific Halibut"){
+    d2 <- filter(d2, survey_abbrev != "IPHC FISS")
   }
 
   # Select relevant data and grid ----
@@ -779,6 +785,8 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
                      "model did not converge"))
     return(NA)
   }
+
+  # browser()
   # Add density dependence to model ----
   ## don't do this for now, but can be used to explore utility of covariates
   if (add_density) {
@@ -891,9 +899,9 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     ## if not, revert to m1 for index generation
     t <- tidy(m2, conf.int = TRUE)
 
-    # if(t$estimate[t$term == "log_density_c"] < - t$std.error[t$term == "log_density_c"]){
+    if(t$estimate[t$term == "log_density_c"] < - t$std.error[t$term == "log_density_c"]){
     ## maybe this approach would make more sense?
-    if(t$conf.high[t$term == "log_density_c"] < 0){
+    # if(t$conf.high[t$term == "log_density_c"] < 0){
       m <- m2
     } else {
       warning(paste(species, maturity,
@@ -908,6 +916,9 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   # Filter grid ----
   if (add_density) {
     grid <- gridB |> mutate(
+      # cell mean across years, means that annual variation removed
+      # while retaining spatial variability in condition due to density
+      # - mean centres it same as predictor variable
       log_density_c = log_mean_density - mean(d$log_density, na.rm = TRUE)
       )
     if(mat_class == "mat") {
