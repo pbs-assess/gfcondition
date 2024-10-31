@@ -42,6 +42,8 @@ unequal_sigma <- TRUE
 density <- FALSE
 ### if condition
 adjusted_for_density <- FALSE
+# just_trend_version <- TRUE
+just_trend_version <- FALSE
 # adjusted_for_density <- TRUE
 
 # trend_count <- 1
@@ -56,8 +58,8 @@ obs_covs <- TRUE
 proc_covs <- FALSE
 }
 
-# set_group <- "immatures"
-set_group <- "mature males"
+set_group <- "immatures"
+# set_group <- "mature males"
 # set_group <- "mature females"
 
 if(no_covs) {
@@ -80,7 +82,7 @@ if(no_covs) {
   if(set_group ==  "mature females") {
     y_label <- "Mature female condition indices (adjusting for density)"
     which_flip <- 0L
-    which_flip2 <- 2L
+    which_flip2 <- 0L
   }
   } else {
   # model_name <- "apr-2024"
@@ -110,6 +112,7 @@ if(no_covs) {
     # model_name <- "apr-2024"
     model_name <- "2024-09-w-pcod-before-10pyr"
     adjusted_for_density <- FALSE
+    ctrl <- list(adapt_delta = 0.90, max_treedepth = 12)
   if(set_group == "immatures") {
     # not converging at the moment
     y_label <- "Immature condition indices (biomass as observation covariate)"
@@ -203,7 +206,7 @@ if(!density){
 }
 
 ggsave(paste0("figs/man/DFA-spaghetti-", model_name, ".png"),
-       height = fig_height*0.75, width = fig_width*0.5)
+       height = fig_height*0.5, width = fig_width*0.5)
 
 ### wide dataframe structure
 # dw <- tidyr::pivot_wider(dg, id_cols = c(year), names_from = species, values_from = est) |>
@@ -644,7 +647,8 @@ if(trend_count>1){
   # pro_covar2 <- pink1
   # pro_covar2 <- sst0   # females
   # pro_covar2 <- tob0   #~
-  pro_covar2 <- o20
+  # pro_covar2 <- o20
+  pro_covar2 <- npgo0
   # pro_covar2 <- so20
 
   if(set_group == "mature females"){
@@ -675,7 +679,8 @@ if(trend_count>1){
   if(set_group == "mature females"){
     # pro_covar2b <- pdo1
       # pro_covar2b <- pp0
-        pro_covar2b <- o2p0
+        # pro_covar2b <- o2p0
+        pro_covar2b <- npgo0
       # pro_covar2b <- sst1
       # pro_covar2b <- tob1   # males
       # pro_covar2b <- so20   # females
@@ -803,6 +808,26 @@ if(trend_count>2){
 
 # DFA summary plots ----
 
+# colour sets
+mixed_set <- c(10,6,4,1)
+mixed_set2 <- c(3,6,1,10) # used for females mostly
+# mixed_set2 <- c(9,6,4,10)
+
+if(just_trend_version) {
+  (p1 <- plot_trends(rflip) +
+     scale_x_continuous(label = label_yrs ) +
+     # scale_colour_brewer(palette = "Paired") +
+     labs(colour = "", ylab = "Standardized value" ) +
+     # theme(legend.position = c(0.2,0.85), axis.title.y = element_text())+
+     # theme(legend.position = "none") +
+     theme(legend.position='top', legend.justification='left', legend.direction='horizontal',
+           plot.margin = unit(c(0,0,0,0), "cm"),
+           legend.text=element_text(size=rel(0.8))) +
+     # ggtitle(paste0("DFA of ", set_group, " with no covariates"))
+     ggtitle(paste0("DFA of ", y_label, ""),
+             subtitle = paste0("    Species condition index ~ Trend1 x Loading1 + Trend2 x Loading2 + Noise"))
+  )
+} else {
 (p1 <- plot_trends(rflip) +
   scale_x_continuous(label = label_yrs ) +
     geom_line(data = covars,
@@ -821,10 +846,7 @@ if(trend_count>2){
             subtitle = paste0("    Species condition index ~ Trend1 x Loading1 + Trend2 x Loading2 + Noise"))
   )
 
-mixed_set <- c(10,6,4,1)
 
-mixed_set2 <- c(3,6,1,10)
-# mixed_set2 <- c(9,6,4,10)
 
 if(trend_count>1){
   if(trend_count>2){
@@ -848,7 +870,7 @@ if(trend_count>1){
   p1 <- p1 + scale_colour_manual(values = RColorBrewer::brewer.pal(n = 4, name = "Paired")[c(2,4)])
 }
 
-
+}
 
 (p2 <- ggplot(correlations) +
   geom_histogram(aes(correlation, fill = var), alpha = 0.7, position="identity") +
