@@ -5,6 +5,33 @@ update_mesh <- function(x) { # x = fitted sdmTMB model
   make_mesh(x$data, x$spde$xy_cols, mesh = x$spde$mesh)
 }
 
+
+#' @export
+#'
+format_survey_labels <- function(data) {
+  data |> mutate(
+      survey_abbrev = ifelse(survey_series_id == 68, "HAKE", survey_abbrev),
+      survey_abbrev = ifelse(survey_series_id == 5, "HS PCOD", survey_abbrev),
+      survey_abbrev = ifelse(survey_series_id == 11, "THORNYHEAD", survey_abbrev),
+      # survey_area = ifelse(survey_abbrev == "HS MSA", "SYN HS",
+      #                 ifelse(survey_abbrev == "MSSM QCS", "SYN QCS",
+      #                 ifelse(survey_abbrev == "MSSM WCVI", "SYN WCVI",
+      #                 survey_abbrev))),
+      survey_type = as.factor(
+        case_when(
+          survey_abbrev %in% c("HBLL OUT S", "HBLL OUT N")~"HBLL",
+          survey_abbrev == "HS MSA"~"MSA",
+          survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year>2002 & year<=2005~"MSSM<=05",
+          survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year>2005~"MSSM>05",
+          survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year <= 2002~"MSSM <03",
+          survey_abbrev %in% c("SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI")~"SYN",
+          survey_abbrev %in% c("EUL N", "EUL S")~"EUL",
+          TRUE~survey_abbrev
+        ))
+    )
+}
+
+
 label_yrs <- function(x, start_year = yrs[1]) {
   x + start_year - 1
 }
