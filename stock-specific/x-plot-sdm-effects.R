@@ -1,26 +1,22 @@
-## SDM effect plots
+## SDM effect plots for all model structures tried for a single species
+## also displays AIC and "FALSE" after the model name when any model failed the sanity() check
+
 library(tidyverse)
 library(sdmTMB)
 library(ggsidekick)
 library(aplot)
 library(patchwork)
 library(gridGraphics)
-
 devtools::load_all(".")
 
 source("stock-specific/00-set-options.R")
 
 spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 
-dir.create(paste0("stock-specific/", spp, "/output/density-effects/"))
-
+dir.create(paste0("stock-specific/", spp, "/output/density-effects/"), showWarnings = FALSE)
 
 model_names <- list.files(paste0("stock-specific/", spp, "/output/density-models"),
                 pattern = "", full.names = FALSE)
-
-
-# variable <- "days_to_solstice"
-# variable <- "log_depth_c"
 
 plot_split_density_effects <- function(model_names, variable, knot_distance) {
 
@@ -73,6 +69,14 @@ for (i in seq_along(model_names)){
 
   if(file.exists(filename)) {
     pd[[j]] <- readRDS(filename)
+
+    if(!('sanity' %in% names(pd[[j]]))){
+    m[[i]] <- readRDS(paste0("stock-specific/", spp, "/output/density-models/",
+                             model_names[i], "/", group_tag, "/", model_file_name))
+    pd[[j]]$AIC <- AIC(m[[i]])
+    pd[[j]]$sanity <- isTRUE(all(sdmTMB::sanity(m[[i]])))
+    saveRDS(pd[[j]], filename)
+    }
   } else {
 
     m[[i]] <- readRDS(paste0("stock-specific/", spp, "/output/density-models/",
@@ -110,6 +114,8 @@ for (i in seq_along(model_names)){
 
   pd[[j]] <- predict(m[[i]], newdata = nd, se_fit = TRUE, re_form = NA)
   pd[[j]]$depth <- exp(pd[[j]]$log_depth_c + 5)
+  pd[[j]]$AIC <- AIC(m[[i]])
+  pd[[j]]$sanity <- isTRUE(all(sdmTMB::sanity(m[[i]])))
 
   saveRDS(pd[[j]], filename)
   }
@@ -125,6 +131,8 @@ for (i in seq_along(model_names)){
     pd[[j]]$est <- NA
     pd[[j]]$est_se <- NA
     pd[[j]]$depth <- exp(pd[[j]]$log_depth_c + 5)
+    pd[[j]]$AIC <- NA
+    pd[[j]]$sanity <- NA
   }
   pd[[j]]$group <- group_label
   pd[[j]]$group_tag <- group_tag
@@ -133,7 +141,6 @@ for (i in seq_along(model_names)){
   # pd[[j]]$model_full_name <- model_file_name
   pd[[j]]$est1 <- NA
   pd[[j]]$est2 <- NA
-
   }
 
   dd <- do.call(rbind, pd)
@@ -196,7 +203,8 @@ p[[i]] <- ggplot(dd, aes(.data[[variable]], exp(est)
        y = "Effect on biomass") +
 theme(axis.title = element_blank())
 
-p[[i]] <- p[[i]] + ggtitle(paste0(model_names[i]))
+p[[i]] <- p[[i]] + ggtitle(paste0(model_names[i], " ", if(!all(unique(na.omit(dd$sanity)))){"FALSE"}),
+                           subtitle = paste0("AIC: ", paste(round(unique(na.omit(dd$AIC))), collapse = ", ")))
 }
 
 saveRDS(p, paste0("data-generated/density-effects/", "all-models-",
@@ -230,13 +238,16 @@ AAAAAA
   set_font <- 12
 # }
 
-
 (g2 <- ((y_lab_big |
-          wrap_plots(gglist = p, ncol = round(length(model_names)/2 + 0.1)) &
+          wrap_plots(gglist = p,
+                     # ncol = round(length(model_names)/2 + 0.1)
+                     ncol = 3
+                     ) &
           # xlim(0, 820) & # if plotting depth
-          theme(text = element_text(size = set_font),
-                axis.text.y = element_blank(),
-                axis.ticks.y = element_blank())) +
+          theme(#axis.text.y = element_blank(),
+                #axis.ticks.y = element_blank(),
+                text = element_text(size = set_font)
+                )) +
          plot_layout(widths = c(0.05, 1), guides = "collect")&labs(
            colour = "", fill = "", alpha = "", linetype = ""
          ))
@@ -245,7 +256,9 @@ AAAAAA
 
 ggsave(paste0("stock-specific/", spp, "/figs/dens-effects-", variable, ".png"),
        height = if(length(model_names)>3){round(length(model_names)/2 + 1)*1.5}else{4},
-       width = round(length(model_names)/2 + 0.1)*3)
+       # width = round(length(model_names)/2 + 0.1)*3
+       width = 10
+      )
 }
 
 
