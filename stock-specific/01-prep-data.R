@@ -78,6 +78,13 @@ if(spp == "lingcod"){
   dsamp <- filter(dsamp, weight < 50000)
 }
 
+# other outliers removed
+dsamp <- dsamp %>%
+  filter(!(weight > 900 & species_common_name == tolower("Pacific Sanddab")))  %>%
+  filter(!(weight > 3500 & species_common_name %in% tolower(c("Yellowmouth Rockfish",
+                                                              # "Widow Rockfish",
+                                                              "Quillback Rockfish"))))
+
 check_for_duplicates2 <- dsamp[duplicated(dsamp$specimen_id), ]
 if(nrow(check_for_duplicates2)>0){ stop(paste(species, "has duplicate specimen ids."))}
 
@@ -115,10 +122,13 @@ library(gfplot)
 dss <- split_catch_by_sex(dset, dsamp,
   # catch_variable = "est_catch_count", # could use this to avoid biomass ~ condition issue?
   # split_by_weight = FALSE, # automatically switches to TRUE for common weight-based catch variables
+  split_by_sex = split_by_sex,
+  split_by_maturity = split_by_maturity,
+  immatures_pooled = immatures_pooled,
   sample_id_re = set_sample_id_re, # used for maturity ogives
+  year_re = mat_year_re,
   # sample_id_re = FALSE,
   # survey = surveys_included, # turning this off allows all samples provided to be used for maturity split
-  immatures_pooled = TRUE,
   # use_median_ratio = TRUE,
   min_sample_number = set_min_sample_number,
   split_by_maturity = maturity_possible,

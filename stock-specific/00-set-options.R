@@ -1,18 +1,19 @@
 # Set options for a single species analysis
 
-# If needing raw data, where is it coming from? ----
-get_data_at_pbs <- FALSE
-get_PE_cached_data <- FALSE
-
 # Species ----
 species <- "Lingcod"
 # species <- "Pacific Halibut"
 # species <- "Dover Sole"
 
-# Data filtering options ----
+# 1. Data retrieval and filtering options ----
+
+## if needing raw data, where is it coming from? ----
+get_data_at_pbs <- FALSE
+get_PE_cached_data <- FALSE
 
 ## set major areas ----
-## all canadian waters
+## this defines the "stock"
+## here using all canadian waters
 major_areas <- c("01", "03", "04", "05", "06", "07", "08", "09",
                  "11", # bc offshore waters
                  "71","72","73","74","75","76","77","99")
@@ -36,23 +37,25 @@ other_surveys_kept <- c(5, # PCOD
 ## retained for length at maturity calculation, but removed from condition analysis
 
 
-# Output options ----
 
-options(scipen = 100, digits = 4)
-ggplot2::theme_set(ggsidekick::theme_sleek())
+# 2. Density model options ----
 
+## structure and name ----
+## *name_long is printed on figures along with resulting family
+## set_family is the starting choice which is reflected in the *_name0
+## set_family2 is the alternate used when the first fails to converge
 
-# Density model options ----
-
-## names ----
 dens_model_name_long <- "depth, DOY, and survey type"
-# dens_model_name0 <- "dln-"
-dens_model_name0 <- "dg-"
 
-## structure ----
+set_family <- sdmTMB::delta_lognormal() # lower AIC for lingcod
+dens_model_name0 <- "dln-"
+
+# set_family <- sdmTMB::delta_gamma()
+# dens_model_name0 <- "dg-"
+
 # set_family <- sdmTMB::delta_gengamma()
-# set_family <- sdmTMB::delta_lognormal()
-set_family <- sdmTMB::delta_gamma()
+# dens_model_name0 <- "dgg-"
+
 set_family2 <- sdmTMB::tweedie()
 knot_distance <<- 20
 
@@ -70,7 +73,7 @@ sdm_surveys_included <- c(
 ## or use only surveys with specimen data ----
 ## this only affects maturity specific models
 only_sampled <- FALSE
-# only_sampled <- TRUE
+only_sampled <- TRUE
 
 ## or use only synoptic data for all density models? ----
 only_synoptic <- FALSE
@@ -78,9 +81,31 @@ only_synoptic <- FALSE
 
 if(only_synoptic) dens_model_name_long <- "depth and DOY"
 
+# 3. Condition model settings ----
 
-# Split-by-maturity settings ----
+## review x-plot-sdm-effects.R figs before choosing which models to use here
 
+dens_model_total <- "dln-2024-11" # this is for total
+dens_model_name1 <- "dln-split-2024-11" # these are `all catches' models
+dens_model_name2 <- "dln-only-sampled-2024-11" # these are `sampled catches' models
+
+## should we exclude samples from years with fewer than some threshold?
+# min_yr_count <- 10 # current main folder, hasn't been run with density yet
+min_yr_count <- NULL
+
+# A. Global options ----
+
+options(scipen = 100, digits = 4)
+ggplot2::theme_set(ggsidekick::theme_sleek())
+
+
+# B. Split-by-maturity settings ----
+
+split_by_maturity <- TRUE
+split_by_sex <- TRUE
+immatures_pooled <- TRUE
+
+mat_year_re <- FALSE
 mat_threshold <- 0.5
 set_min_sample_number <- 6 # sample cutoff for splits, function default is 10
 
@@ -134,6 +159,21 @@ if (species == "Shortraker Rockfish") {
   custom_length_threshold <- c(45, 49.9)
 }
 
+# if (species == "Pacific Halibut") {
+#   # Takada 2017 for females, males less precise.. btw 70-79
+#   # no accurate values for males available so wont use for now
+#   custom_length_threshold <- c(70, 96.7)
+# }
 
 
-
+# ## could use separate estimates for each year
+# # year_re <- TRUE
+# ## discovered that petrale length at maturity was unusually high in WCVI 2004 and 2006
+# year_re <- FALSE
+# sample_id_re <- TRUE
+#
+# # if(species == "Pacific Halibut") {
+# # year_re <- FALSE
+# # sample_id_re <- FALSE
+# # # fish <- filter(fish, maturity_code != 7 | is.na(maturity_code))
+# # }
