@@ -4,6 +4,8 @@ library(sdmTMB)
 library(ggsidekick)
 devtools::load_all(".")
 
+source("stock-specific/00-set-options.R")
+
 index_list <- expand.grid(maturity = c("imm",
                                        "mat"),
                           males = c(TRUE,
@@ -208,7 +210,7 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
     ds$Y <- NULL
     ds2 <- sdmTMB::add_utm_columns(ds,
                                    ll_names = c("longitude", "latitude"),
-                                   utm_crs = 32609)
+                                   utm_crs = set_utm_crs)
 
     nd0 <- ds2 %>%
       select(year, survey_abbrev, fishing_event_id, X, Y, log_depth) %>%
@@ -600,23 +602,24 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
   # Estimate condition model ----
 
     d$sample_multiplier <- 1
-    model_name <- "2024-09" # all survey groups
 
-    dir.create(paste0("stock-specific/", spp, "/output/condition-models-",
-                      group_tag, "/"),
+    sysdate <- unlist(strsplit(as.character(Sys.Date()), "-"))
+
+    model_name <- paste0(cond_model_prefix, sysdate[1], "-", sysdate[2], "")
+
+    dir.create(paste0("stock-specific/", spp, "/output/condition-models/"),
                showWarnings = FALSE)
     dir.create(paste0("stock-specific/", spp, "/output/cond-index/"),
                showWarnings = FALSE)
 
-  dir.create(paste0("stock-specific/", spp, "/output/condition-models-",
-                    group_tag, "/", model_name, "/"),
+  dir.create(paste0("stock-specific/", spp, "/output/condition-models/", model_name, "/"),
              showWarnings = FALSE)
   dir.create(paste0("stock-specific/", spp, "/output/cond-index/", model_name, "/"),
              showWarnings = FALSE)
 
 
   mf <- paste0(
-    "stock-specific/", spp, "/output/condition-models-", group_tag, "/", model_name, "/", spp, "-c-",
+    "stock-specific/", spp, "/output/condition-models/", model_name, "/", spp, "-c-",
     group_tag, "-", model_name, "-", knot_distance, "-km.rds"
   )
 
@@ -740,14 +743,9 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
 
       d$sample_multiplier <- 1
 
-      # # model_name <- "apr-2024-density"
-      # # model_name <- "apr-2024-not-total-density"
-      # model_name <- "apr-2024-cell-means"
-      # # model_name <- "doy-ld0c" # next update, change to this
-      model_name <- "2024-09-doy-ld0c"
+      model_name <- paste0(model_name, "-ld0c")
 
-    dir.create(paste0("stock-specific/", spp, "/output/condition-models-", group_tag,
-                      "/", model_name, "/"), showWarnings = FALSE)
+    dir.create(paste0("stock-specific/", spp, "/output/condition-models/", model_name, "/"), showWarnings = FALSE)
 
     dir.create(paste0("stock-specific/", spp, "/output/cond-index/", model_name, "/"),
                showWarnings = FALSE)
@@ -785,7 +783,7 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
     # Model (with density) ----
 
     mf2 <- paste0(
-      "stock-specific/", spp, "/output/condition-models-", group_tag, "/", model_name, "/",
+      "stock-specific/", spp, "/output/condition-models/", model_name, "/",
       spp, "-c-", group_tag, "-", model_name, "-", knot_distance, "-km.rds"
     )
 
@@ -907,21 +905,32 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
     model_name, "-", knot_distance, "-km.rds"
   )
 
-  if (!file.exists(i1)) {
+  dir.create(paste0("stock-specific/", spp, "/output/cond-pred/"),
+             showWarnings = FALSE)
+  dir.create(paste0("stock-specific/", spp, "/output/cond-pred/", model_name,"/"),
+             showWarnings = FALSE)
+
+  pf <- paste0(
+    "stock-specific/", spp, "/output/cond-pred/", model_name,
+    "/cond-pred-", group_tag, "-", spp, "-",
+    model_name, "-", knot_distance, "-km.rds"
+  )
+
+  if (!file.exists(i1)|!file.exists(pf)) {
 
   pc <- predict(m, newdata = grid, return_tmb_object = TRUE)
-
 
   p2 <- pc$data %>%
     # filter(!(year == 2020)) %>%
     mutate(cond = exp(est))
 
+  # note this is before trimming
+  saveRDS(p2, pf)
 
   # browser()
   # filter to plot only cells representing 99% of mean predicted biomass
   # cells must be defined by "X", "Y", time by "year", and biomass/abundance stored as "density"
   p2 <- trim_predictions_by_year(p2, 0.001)
-
 
   # Map model predictions ----
 
@@ -977,16 +986,17 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
       ggplot2::scale_fill_viridis_c(),
     # ggplot2::scale_fill_viridis_c(trans = "log10"),
     bounds = grid,
-    rotation_angle = 30, show_raw_data = TRUE
+    rotation_angle = 30,
+    show_raw_data = TRUE
   )
 
   # browser()
 
-  g <- g + facet_wrap(~year, ncol = 7) +
+  g <- g + facet_wrap(~year, ncol = 8) +
     ggtitle(paste0(species, ": ", group_label, " ", model_name))
 
   dir.create(paste0("stock-specific/", spp, "/figs/cond-", model_name, "/"), showWarnings = FALSE)
-  ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name, "/condition-map-wide-", spp, "-", group_tag, "-",
+  ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name, "/condition-map-", spp, "-", group_tag, "-",
                 model_name, "-", knot_distance, "-km.png"),
          height = fig_height*1.5, width = fig_width
   )
@@ -1112,119 +1122,14 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
   ##  model_name, "-", knot_distance, "-km.png"), height = fig_height, width = fig_width)
 
 
-  # plot_covariates <- TRUE
-  plot_covariates <- FALSE
-
-  if (plot_covariates) {
-
-    nd <- data.frame(
-      days_to_solstice = seq(min(d$days_to_solstice),
-                             max(d$days_to_solstice),
-                             length.out = 50
-      ),
-      survey_group = levels(sg$survey_group)[1],
-      log_density_c = 0,
-      ann_log_density_c = 0,
-      dens_dev = 0,
-      year = 2021L # a chosen year
-    )
-    pd <- predict(m, newdata = nd, se_fit = TRUE, re_form = NA)
-
-    ggplot(pd, aes(days_to_solstice, exp(est),
-                   ymin = exp(est - 1.96 * est_se),
-                   ymax = exp(est + 1.96 * est_se)
-    )) +
-      geom_line() +
-      geom_ribbon(alpha = 0.4) +
-      scale_x_continuous() +
-      coord_cartesian(expand = F) +
-      labs(x = "Days to solstice", y = "condition") +
-      ggtitle(paste0(species, ": ", group_label, " ", model_name))
-
-    ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name, "/effect-plot-doy-", spp, "-",
-                  group_tag, "-", model_name, "-", knot_distance, "-km.png"),
-           height = fig_height / 2, width = fig_width / 2
-    )
-
-    # Effect plots ----
-    if (add_density) {
-      nd2 <- data.frame(
-        days_to_solstice = 0,
-        survey_group = levels(sg$survey_group)[1],
-        log_density_c = seq(min(d$log_density_c),
-                            max(d$log_density_c),
-                            length.out = 50
-        ),
-        ann_log_density_c = 0,
-        # ann_log_density_c = seq(min(d$ann_log_density_c),
-        #                         max(d$ann_log_density_c),
-        #                         length.out = 50
-        # ),
-        dens_dev = 0,
-        year = 2021L # a chosen year
-      )
-      pd <- predict(m, newdata = nd2, se_fit = TRUE, re_form = NA)
-
-      if(model_name == "all-st2002-doy-lddev") {
-        nd3 <- data.frame(
-          days_to_solstice = 0,
-          survey_group = levels(sg$survey_group)[1],
-          log_density_c = seq(min(d$log_density_c),
-                              max(d$log_density_c),
-                              length.out = 50
-          ),
-          ann_log_density_c = 0,
-          # ann_log_density_c = seq(min(d$ann_log_density_c),
-          #                         max(d$ann_log_density_c),
-          #                         length.out = 50
-          # ),
-          dens_dev = 0,
-          year = 2021L # a chosen year
-        )
-        pd <- predict(m, newdata = nd3, se_fit = TRUE, re_form = NA)
-
-        ggplot(pd, aes(ann_log_density_c, exp(est),
-                       ymin = exp(est - 1.96 * est_se),
-                       ymax = exp(est + 1.96 * est_se)
-        )) +
-        geom_line() +
-        geom_ribbon(alpha = 0.4) +
-        scale_x_continuous() +
-        coord_cartesian(expand = F) +
-        labs(x = "ann_log_density_c", y = "condition") +
-        ggtitle(paste0(species, ": ", group_label, " ", model_name))
-    } else {
-      ggplot(pd, aes(log_density_c, exp(est),
-                     ymin = exp(est - 1.96 * est_se),
-                     ymax = exp(est + 1.96 * est_se)
-      )) +
-        geom_line() +
-        geom_ribbon(alpha = 0.4) +
-        scale_x_continuous() +
-        coord_cartesian(expand = F) +
-        labs(x = "log_density_c", y = "condition") +
-        ggtitle(paste0(species, ": ", group_label, " ", model_name))
-
-    }
-
-    ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name, "/effect-plot-density-", spp, "-",
-                  group_tag, "-", model_name, "-", knot_distance, "-km.png"),
-           height = fig_height / 2, width = fig_width / 2
-    )
-
-    }
-
-    # g <- ggeffects::ggeffect(m, paste0("log_density_c [",
-    #   range(d$log_density_c)[1], ":", range(d$log_density_c)[2], "by=0.05]"))
-    # plot(g)
-  }
 }
 
+if(!use_parallel) {
 # Run with pmap -----
 
-# index_list <- index_list[2, ]
 pmap(index_list, calc_condition_indices)
 
+} else {
 # Run with furrr ----
 
 library(gfcondition)
@@ -1236,5 +1141,5 @@ cores <- round(parallel::detectCores() / 2)
 (cores <- parallel::detectCores() - 6L)
 if (!is_rstudio && is_unix) plan(multicore, workers = cores) else plan(multisession, workers = cores)
 
-
 furrr::future_pmap(index_list, calc_condition_indices)
+}
