@@ -1,4 +1,3 @@
-
 ## condition effect plots for all model structures tried for a single species
 ## also displays AIC and "FALSE" after the model name when any model failed the sanity() check
 
@@ -17,14 +16,14 @@ spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 dir.create(paste0("stock-specific/", spp, "/output/condition-effects/"), showWarnings = FALSE)
 
 model_names <- list.files(paste0("stock-specific/", spp, "/output/condition-models"),
-                          pattern = "", full.names = FALSE)
+  pattern = "", full.names = FALSE
+)
 
 plot_split_condition_effects <- function(model_names, variable, knot_distance) {
-
   m <- list()
   p <- list()
 
-  for (i in seq_along(model_names)){
+  for (i in seq_along(model_names)) {
     spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 
     pd <- list()
@@ -32,44 +31,50 @@ plot_split_condition_effects <- function(model_names, variable, knot_distance) {
 
     m[[i]] <- NULL
 
-    for(j in 1:3) {
-      if(j == 1)  {
+    for (j in 1:3) {
+      if (j == 1) {
         group_tag <- "imm"
-        group_label <-  "Immature"
+        group_label <- "Immature"
       }
-      if(j == 2)  {
+      if (j == 2) {
         group_tag <- "mat-fem"
         group_label <- "Mature female"
       }
-      if(j == 3)  {
+      if (j == 3) {
         group_tag <- "mat-m"
         group_label <- "Mature male"
       }
 
 
-      model_file_name <- list.files(paste0("stock-specific/", spp, "/output/condition-models/",
-                                           model_names[i]),
-                                    pattern = "", full.names = FALSE)
-# browser()
-      full_model_path <- paste0("stock-specific/", spp, "/output/condition-models/",
-             model_names[i], "/", model_file_name[j])
+      model_file_name <- list.files(
+        paste0(
+          "stock-specific/", spp, "/output/condition-models/",
+          model_names[i]
+        ),
+        pattern = "", full.names = FALSE
+      )
+      # browser()
+      full_model_path <- paste0(
+        "stock-specific/", spp, "/output/condition-models/",
+        model_names[i], "/", model_file_name[j]
+      )
 
-      if(file.exists(full_model_path)) {
+      if (file.exists(full_model_path)) {
+        filename <- paste0(
+          "stock-specific/", spp, "/output/condition-effects/",
+          variable, "-", model_file_name[j]
+        )
 
-        filename <- paste0("stock-specific/", spp, "/output/condition-effects/",
-                           variable, "-", model_file_name[j])
-
-        if(file.exists(filename)) {
+        if (file.exists(filename)) {
           pd[[j]] <- readRDS(filename)
 
-          if(!('sanity' %in% names(pd[[j]]))){
+          if (!("sanity" %in% names(pd[[j]]))) {
             m[[i]] <- readRDS(full_model_path)
             pd[[j]]$AIC <- AIC(m[[i]])
             pd[[j]]$sanity <- isTRUE(all(sdmTMB::sanity(m[[i]])))
             saveRDS(pd[[j]], filename)
           }
         } else {
-
           m[[i]] <- readRDS(full_model_path)
 
           # m[[i]] <- sdmTMB:::update_version(m[[i]])
@@ -79,12 +84,12 @@ plot_split_condition_effects <- function(model_names, variable, knot_distance) {
           t <- tidy(m[[i]], conf.int = TRUE)
 
 
-          if (variable == "log_depth_c"|variable == "depth") {
+          if (variable == "log_depth_c" | variable == "depth") {
             nd <- data.frame(
               days_to_solstice = 0,
               log_depth_c = seq(quantile(m[[i]]$data$log_depth_c, 0.025),
-                                quantile(m[[i]]$data$log_depth_c, 0.975),
-                                length.out = 50
+                quantile(m[[i]]$data$log_depth_c, 0.975),
+                length.out = 50
               ),
               survey_group = "TRAWL",
               log_density_c = 0,
@@ -102,8 +107,8 @@ plot_split_condition_effects <- function(model_names, variable, knot_distance) {
               days_to_solstice = 0,
               survey_group = "TRAWL",
               log_density_c = seq(min(m[[i]]$data$log_density_c),
-                                  max(m[[i]]$data$log_density_c),
-                                  length.out = 50
+                max(m[[i]]$data$log_density_c),
+                length.out = 50
               ),
               ann_log_density_c = 0,
               dens_dev = 0,
@@ -111,20 +116,18 @@ plot_split_condition_effects <- function(model_names, variable, knot_distance) {
               year = max(m[[i]]$data$year) # a chosen year
             )
             xlabel <- "Local log density of maturity class (centered on mean)"
-
           }
 
 
-          if(variable == "days_to_solstice") {
-
+          if (variable == "days_to_solstice") {
             nd <- data.frame(
               # days_to_solstice = seq(min(m[[i]]$data$days_to_solstice),
               #                        max(m[[i]]$data$days_to_solstice),
               #                        length.out = 50
               # ),
               days_to_solstice = seq(quantile(m[[i]]$data$days_to_solstice, 0.025),
-                                     quantile(m[[i]]$data$days_to_solstice, 0.975),
-                                     length.out = 50
+                quantile(m[[i]]$data$days_to_solstice, 0.975),
+                length.out = 50
               ),
               survey_group = "TRAWL",
               log_density_c = 0,
@@ -144,18 +147,15 @@ plot_split_condition_effects <- function(model_names, variable, knot_distance) {
           pd[[j]]$sig <- 1
 
           if (variable == "log_density_c") {
-
-
-          if(t$estimate[t$term == "log_density_c"] < -t$std.error[t$term == "log_density_c"]){
-            # if(t$conf.high[t$term == "log_density_c"] < 0){ # too strict?
-            pd[[j]]$sig <- 1
-          } else {
-            pd[[j]]$sig <- 0
-          }
+            if (t$estimate[t$term == "log_density_c"] < -t$std.error[t$term == "log_density_c"]) {
+              # if(t$conf.high[t$term == "log_density_c"] < 0){ # too strict?
+              pd[[j]]$sig <- 1
+            } else {
+              pd[[j]]$sig <- 0
+            }
           }
           saveRDS(pd[[j]], filename)
         }
-
       } else {
         # for missing models, fill in empty data
         nd <- data.frame(
@@ -226,93 +226,112 @@ plot_split_condition_effects <- function(model_names, variable, knot_distance) {
       pd$density <- exp(pd$log_density_c + mean(m[[i]]$data$log_density, na.rm = TRUE))
 
       p[[i]] <- ggplot(dd, aes(density, exp(est))) +
-        geom_rug(data = m[[i]]$data, aes(density, y = 0.95),
-                 sides = "b", alpha = 0.1, inherit.aes = FALSE) +
+        geom_rug(
+          data = m[[i]]$data, aes(density, y = 0.95),
+          sides = "b", alpha = 0.1, inherit.aes = FALSE
+        ) +
         geom_line(data = dd, aes(colour = group, alpha = as.factor(sig))) +
-        scale_alpha_discrete(label = c("No","Yes")) +
-        geom_ribbon(data = dd,
-                    aes(ymin = exp(est - 1.96 * est_se),
-                        ymax = exp(est + 1.96 * est_se),
-                        fill = group),
-                    alpha = 0.1)
+        scale_alpha_discrete(label = c("No", "Yes")) +
+        geom_ribbon(
+          data = dd,
+          aes(
+            ymin = exp(est - 1.96 * est_se),
+            ymax = exp(est + 1.96 * est_se),
+            fill = group
+          ),
+          alpha = 0.1
+        )
 
-    # p[[i]] <- ggplot(dd, aes(.data[[variable]], exp(est)
-    # )) +
-    #   geom_rug(data = m[[i]]$data, aes(.data[[variable]], y = 0.9),
-    #            sides = "b", alpha = 0.1, inherit.aes = FALSE) +
-    #   geom_line(data = filter(dd, group == "Total"), colour = "black", aes(linetype = "Total")) +
-    #   geom_ribbon(data = filter(dd, group == "Total"),
-    #               aes(ymin = exp(est - 1.96 * est_se),
-    #                   ymax = exp(est + 1.96 * est_se)),
-    #               alpha = 0.1,
-    #               fill = "black") +
-    #   geom_line(data = filter(dd, group != "Total"), aes(colour = group, linetype = "Split"), alpha = 0.8) +
-    #   geom_ribbon(data = filter(dd, group != "Total"),
-    #               aes(ymin = exp(est - 1.96 * est_se),
-    #                   ymax = exp(est + 1.96 * est_se),
-    #                   alpha = group,
-    #                   fill = group)) +
-    #   scale_x_continuous() +
-    #   scale_linetype_manual(values=c(1,2)) +
-    #   scale_alpha_discrete(range = c(0.05, 0.1)) +
-    #   scale_color_viridis_d(option = "D", direction =1) +
-    #   scale_fill_viridis_d(option = "D", direction =1) +
-    #   coord_cartesian(#expand = F,
-    #     xlim = c(min(dd[[variable]]), max(dd[[variable]])),
-    #     ylim = c(NA,
-    #              max(exp(dd$est), na.rm = TRUE)+
-    #                max(exp(dd$est)*0.9, na.rm = TRUE))) +
-    #   # coord_cartesian(expand = F, ylim = c(NA, NA)) +
-    #   labs(x = xlabel,
-    #        y = "Effect on biomass") +
-    #   theme(axis.title = element_blank())
+      # p[[i]] <- ggplot(dd, aes(.data[[variable]], exp(est)
+      # )) +
+      #   geom_rug(data = m[[i]]$data, aes(.data[[variable]], y = 0.9),
+      #            sides = "b", alpha = 0.1, inherit.aes = FALSE) +
+      #   geom_line(data = filter(dd, group == "Total"), colour = "black", aes(linetype = "Total")) +
+      #   geom_ribbon(data = filter(dd, group == "Total"),
+      #               aes(ymin = exp(est - 1.96 * est_se),
+      #                   ymax = exp(est + 1.96 * est_se)),
+      #               alpha = 0.1,
+      #               fill = "black") +
+      #   geom_line(data = filter(dd, group != "Total"), aes(colour = group, linetype = "Split"), alpha = 0.8) +
+      #   geom_ribbon(data = filter(dd, group != "Total"),
+      #               aes(ymin = exp(est - 1.96 * est_se),
+      #                   ymax = exp(est + 1.96 * est_se),
+      #                   alpha = group,
+      #                   fill = group)) +
+      #   scale_x_continuous() +
+      #   scale_linetype_manual(values=c(1,2)) +
+      #   scale_alpha_discrete(range = c(0.05, 0.1)) +
+      #   scale_color_viridis_d(option = "D", direction =1) +
+      #   scale_fill_viridis_d(option = "D", direction =1) +
+      #   coord_cartesian(#expand = F,
+      #     xlim = c(min(dd[[variable]]), max(dd[[variable]])),
+      #     ylim = c(NA,
+      #              max(exp(dd$est), na.rm = TRUE)+
+      #                max(exp(dd$est)*0.9, na.rm = TRUE))) +
+      #   # coord_cartesian(expand = F, ylim = c(NA, NA)) +
+      #   labs(x = xlabel,
+      #        y = "Effect on biomass") +
+      #   theme(axis.title = element_blank())
 
-    # p[[i]] <- p[[i]] + ggtitle(paste0(model_names[i], " ", if(!all(unique(na.omit(dd$sanity)))){"FALSE"}),
-    #                            subtitle = paste0("AIC: ", paste(round(unique(na.omit(dd$AIC))), collapse = ", ")))
+      # p[[i]] <- p[[i]] + ggtitle(paste0(model_names[i], " ", if(!all(unique(na.omit(dd$sanity)))){"FALSE"}),
+      #                            subtitle = paste0("AIC: ", paste(round(unique(na.omit(dd$AIC))), collapse = ", ")))
 
 
-    xlabel <- "Local biomass density of maturity class (slopes are in log space)"
+      xlabel <- "Local biomass density of maturity class (slopes are in log space)"
 
-    p[[i]] <- p[[i]] + ggtitle(paste0(model_names[i], " ", if(!all(unique(na.omit(dd$sanity)))){"FALSE"}),
-                               subtitle = paste0("AIC: ", paste(round(unique(na.omit(dd$AIC))), collapse = ", ")))
-    # p[[i]] <- p[[i]] + ggtitle(paste0(stringr::str_to_title(m[[i]]$data$species_common_name)),
+      p[[i]] <- p[[i]] + ggtitle(
+        paste0(model_names[i], " ", if (!all(unique(na.omit(dd$sanity)))) {
+          "FALSE"
+        }),
+        subtitle = paste0("AIC: ", paste(round(unique(na.omit(dd$AIC))), collapse = ", "))
+      )
+      # p[[i]] <- p[[i]] + ggtitle(paste0(stringr::str_to_title(m[[i]]$data$species_common_name)),
       #                          subtitle = paste0(
       # "slope: ", round(t$estimate[t$term == variable], 3),
       # ", SE: ", round(t$std.error[t$term == variable], 3), ""
-    # ))
-
-
+      # ))
     } else {
-
       p[[i]] <- ggplot(dd, aes(.data[[variable]], exp(est))) +
-        geom_rug(data = m[[i]]$data, aes(.data[[variable]], y = 0.95),
-                 sides = "b", alpha = 0.1, inherit.aes = FALSE) +
+        geom_rug(
+          data = m[[i]]$data, aes(.data[[variable]], y = 0.95),
+          sides = "b", alpha = 0.1, inherit.aes = FALSE
+        ) +
         geom_line(data = dd, aes(colour = group)) +
-        geom_ribbon(data = dd,
-                    aes(ymin = exp(est - 1.96 * est_se),
-                        ymax = exp(est + 1.96 * est_se),
-                        fill = group),
-                    alpha = 0.1) +
+        geom_ribbon(
+          data = dd,
+          aes(
+            ymin = exp(est - 1.96 * est_se),
+            ymax = exp(est + 1.96 * est_se),
+            fill = group
+          ),
+          alpha = 0.1
+        ) +
         scale_x_continuous()
 
       p[[i]] <- p[[i]] +
-        ggtitle(paste0(model_names[i], " ",
-                       if(!all(unique(na.omit(dd$sanity)))){"FALSE"}),
-          subtitle = paste0("AIC: ", paste(round(unique(na.omit(dd$AIC))), collapse = ", ")))
+        ggtitle(
+          paste0(
+            model_names[i], " ",
+            if (!all(unique(na.omit(dd$sanity)))) {
+              "FALSE"
+            }
+          ),
+          subtitle = paste0("AIC: ", paste(round(unique(na.omit(dd$AIC))), collapse = ", "))
+        )
     }
 
     p[[i]] <- p[[i]] +
-      scale_color_viridis_d(option = "D", direction =1) +
-      scale_fill_viridis_d(option = "D", direction =1) +
+      scale_color_viridis_d(option = "D", direction = 1) +
+      scale_fill_viridis_d(option = "D", direction = 1) +
       facet_wrap(~group) +
       scale_x_continuous() +
       coord_cartesian(expand = F) +
       labs(
         alpha = "Negative \neffect",
         x = xlabel,
-           y = "Effect on condition") +
+        y = "Effect on condition"
+      ) +
       theme(axis.title = element_blank())
-
   }
 
   # if (variable == "log_depth_c") {
@@ -321,18 +340,22 @@ plot_split_condition_effects <- function(model_names, variable, knot_distance) {
   # }
 
   y_lab_big <- ggplot() +
-    annotate(geom = "text", x = 1, y = 1, size = 5,
-             label = paste0("Conditional effect on body condition"), angle = 90) +
-    coord_cartesian(clip = "off")+
+    annotate(
+      geom = "text", x = 1, y = 1, size = 5,
+      label = paste0("Conditional effect on body condition"), angle = 90
+    ) +
+    coord_cartesian(clip = "off") +
     theme_void()
 
   x_lab_big <- ggplot() +
-    annotate(geom = "text", x = 1, y = 1, size = 5,
-             label = paste("", xlabel)) +
-    coord_cartesian(clip = "off")+
+    annotate(
+      geom = "text", x = 1, y = 1, size = 5,
+      label = paste("", xlabel)
+    ) +
+    coord_cartesian(clip = "off") +
     theme_void()
 
-  design = "
+  design <- "
 AAAAAA
 #BBBBB
 "
@@ -342,25 +365,30 @@ AAAAAA
   # }
 
   (g2 <- ((y_lab_big |
-             wrap_plots(gglist = p,
-                        # ncol = round(length(model_names) + 0.1)
-                        ncol = 1
-             ) &
-             # xlim(0, 820) & # if plotting depth
-             theme(#axis.text.y = element_blank(),
-               #axis.ticks.y = element_blank(),
-               text = element_text(size = set_font)
-             )) +
-            plot_layout(widths = c(0.05, 1), guides = "collect")&labs(
-              colour = "", fill = "", linetype = ""
-            ))
-    /x_lab_big + plot_layout(heights = c(1,0.05), design = design)
+    wrap_plots(
+      gglist = p,
+      # ncol = round(length(model_names) + 0.1)
+      ncol = 1
+    ) &
+      # xlim(0, 820) & # if plotting depth
+      theme( # axis.text.y = element_blank(),
+        # axis.ticks.y = element_blank(),
+        text = element_text(size = set_font)
+      )) +
+    plot_layout(widths = c(0.05, 1), guides = "collect") & labs(
+    colour = "", fill = "", linetype = ""
+  ))
+  / x_lab_big + plot_layout(heights = c(1, 0.05), design = design)
   )
 
   ggsave(paste0("stock-specific/", spp, "/figs/condition-effects-", variable, ".png"),
-         height = if(length(model_names)>1){round(length(model_names)/2 + 1)*4}else{4},
-         # width = round(length(model_names)/2 + 0.1)*3
-         width = 10
+    height = if (length(model_names) > 1) {
+      round(length(model_names) / 2 + 1) * 4
+    } else {
+      4
+    },
+    # width = round(length(model_names)/2 + 0.1)*3
+    width = 10
   )
 }
 
