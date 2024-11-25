@@ -36,6 +36,7 @@ other_surveys_kept <- c(5, # PCOD
 ## at different time of year than all the others and only has weights for certain species
 ## retained for length at maturity calculation, but removed from condition analysis
 
+set_utm_crs <- 32609
 
 
 # 2. Density model options ----
@@ -83,6 +84,9 @@ if(only_synoptic) dens_model_name_long <- "depth and DOY"
 
 # 3. Condition model settings ----
 
+# option to add prefix to models otherwise named with "year-month"
+cond_model_prefix <- ""
+
 ## review x-plot-sdm-effects.R figs before choosing which models to use here
 
 dens_model_total <- "dln-2024-11" # this is for total
@@ -92,6 +96,10 @@ dens_model_name2 <- "dln-only-sampled-2024-11" # these are `sampled catches' mod
 ## should we exclude samples from years with fewer than some threshold?
 # min_yr_count <- 10 # current main folder, hasn't been run with density yet
 min_yr_count <- NULL
+
+# to run using future package
+# gfcondition must be installed
+use_parallel <- TRUE
 
 # A. Global options ----
 

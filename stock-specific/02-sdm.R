@@ -147,7 +147,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
 
   d <- sdmTMB::add_utm_columns(ds,
                                ll_names = c("longitude", "latitude"),
-                               utm_crs = 32609)
+                               utm_crs = set_utm_crs)
 
   saveRDS(d, paste0("stock-specific/", spp, "/output/", "density-data-", spp, ".rds"))
 
