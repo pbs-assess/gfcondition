@@ -136,5 +136,38 @@ for (j in seq_along(pred_files)){
          height = 6, width = 11
   )
 
+  ## probably don't need these for every model but keeping here for interest
+  #
+  # ggplot(p2, aes(X, Y, colour = log_density, fill = log_density)) +
+  #   geom_tile(width = 2, height = 2, alpha = 1) +
+  #   # facet_wrap(~year) +
+  #   scale_fill_viridis_c() +
+  #   scale_colour_viridis_c()
+  #
+  ## ggsave(paste0("stock-specific/", spp, "/figs/density-map-", spp, "-", group_tag, "-", model_name,
+  #   "-", knot_distance, "-km.png"), height = fig_height, width = fig_width)
+  # ggplot(p2, aes(X, Y,
+  #                colour = omega_s,
+  #                fill = omega_s)) +
+  #   geom_tile(width = 2, height = 2, alpha = 1) +
+  #   # facet_wrap(~year) +
+  #   scale_fill_gradient2() +
+  #   scale_colour_gradient2()
+  #
+  ## ggsave(paste0("stock-specific/", spp, "/figs/condition-omega-map-", spp, "-", group_tag,
+  ##  model_name, "-", knot_distance, "-km.png"), height = fig_height, width = fig_width)
+  #
+  #
+  # ggplot(p2, aes(X, Y, colour = epsilon_st, fill = epsilon_st)) +
+  #   geom_tile(width = 2, height = 2, alpha = 1) +
+  #   facet_wrap(~year) +
+  #   scale_fill_gradient2() +
+  #   scale_colour_gradient2()
+  #
+  ## ggsave(paste0("stock-specific/", spp, "/figs/condition-epsilon-map-", spp, "-", group_tag,
+  ##  model_name, "-", knot_distance, "-km.png"), height = fig_height, width = fig_width)
+
+
+
 }
 }
