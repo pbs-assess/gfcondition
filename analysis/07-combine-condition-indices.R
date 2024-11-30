@@ -72,23 +72,23 @@ set_ncol <- 8
 set_legend_position <- c(0.75,0.08)
 fig_height <- 8
 fig_width <- 16
-
-species_to_plot <- Flatfish
-set_name <- "flatfish-"
 #
-species_to_plot <- species_list[!(species_list %in% c(Rockfish, Flatfish))]
-set_name <- "other-"
-#
-fig_height <- 4
-fig_width <- 10
-set_ncol <- 5
-set_legend_position <- "none"
-#
-species_to_plot <- Rockfish
-set_name <- "rockfish-"
-fig_height <- 5.5
-fig_width <- 12
-set_ncol <- 6
+# species_to_plot <- Flatfish
+# set_name <- "flatfish-"
+# # #
+# species_to_plot <- species_list[!(species_list %in% c(Rockfish, Flatfish))]
+# set_name <- "other-"
+# # #
+# fig_height <- 4
+# fig_width <- 10
+# set_ncol <- 5
+# set_legend_position <- "none"
+# #
+# species_to_plot <- Rockfish
+# set_name <- "rockfish-"
+# fig_height <- 5.5
+# fig_width <- 12
+# set_ncol <- 6
 # # set_legend_position <- c(0.7, 0.1)
 
 d1 |> bind_rows(d2)  |>
