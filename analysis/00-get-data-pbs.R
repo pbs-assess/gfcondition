@@ -70,11 +70,18 @@ library(tidyverse)
 # if wanting to include IPHC halibut data, if can be downloaded here
 # https://www.iphc.int/data/fiss-pacific-halibut-data/
 # and wrangled to match PBS data this way
+# iphc <- read_csv("data-raw/IPHC-2024-FISS-Pacific-halibut_1998-2024b.csv", skip = 33) # wrong format
 library(readr)
+## old data missing weights from 2019-2022
+# iphc <- read_csv("data-raw/IPHC-halibut-data.csv")
+# iphc2 <- read_csv("data-raw/IPHC-set-data.csv") |> select(-`Row number`)
 
+library(readxl)
+iphc <- read_excel("data-raw/Pacific halibut data.xlsx",
+          col_types = c("text", "numeric", "numeric", "numeric", "numeric", "numeric",
+                        "numeric", "text", "text", "numeric", "numeric", "numeric", "numeric"))
 
-iphc <- read_csv("data-raw/IPHC-halibut-data.csv")
-iphc2 <- read_csv("data-raw/IPHC-set-data.csv") |> select(-`Row number`)
+iphc2 <- read_csv("data-raw/IPHC-set-data-2024.csv") |> select(-`Row number`)
 iphc <- left_join(iphc,iphc2) |>
   # remove stations in inside waters
   filter(!(Station %in% c(
@@ -221,15 +228,15 @@ dsamp <- dsamp |>
          doorspread_m = ifelse(is.logical(na.omit(doorspread_m)), NA, na.omit(doorspread_m))) |>
   ungroup()
 
-# temp fix for MSSM issure
+# temp fix for MSSM issue
 .d <- dsamp
 
-try(.d[ ((.d$survey_series_id == 7 & .d$major_stat_area_code %in% c("05", "06"))), ]$survey_series_id <- 6, silent = TRUE)
-try(.d[ ((.d$survey_series_id == 6 & .d$major_stat_area_code %in% c("03", "04"))), ]$survey_series_id <- 7, silent = TRUE)
-try(.d[ ((.d$survey_series_id == 7)), ]$survey_series_desc <- "West Coast Vancouver Island Multispecies Small-mesh Bottom Trawl", silent = TRUE)
-try(.d[ ((.d$survey_series_id == 6)), ]$survey_series_desc <- "Queen Charlotte Sound Multispecies Small-mesh Bottom Trawl", silent = TRUE)
-try(.d[ ((.d$survey_series_id == 7)), ]$survey_abbrev <- "MSSM WCVI", silent = TRUE)
-try(.d[ ((.d$survey_series_id == 6)), ]$survey_abbrev <- "MSSM QCS", silent = TRUE)
+try(.d[ ((.d$survey_series_id %in% 7 & .d$major_stat_area_code %in% c("05", "06"))), ]$survey_series_id <- 6, silent = TRUE)
+try(.d[ ((.d$survey_series_id %in% 6 & .d$major_stat_area_code %in% c("03", "04"))), ]$survey_series_id <- 7, silent = TRUE)
+try(.d[ ((.d$survey_series_id %in% 7)), ]$survey_series_desc <- "West Coast Vancouver Island Multispecies Small-mesh Bottom Trawl", silent = TRUE)
+try(.d[ ((.d$survey_series_id %in% 6)), ]$survey_series_desc <- "Queen Charlotte Sound Multispecies Small-mesh Bottom Trawl", silent = TRUE)
+try(.d[ ((.d$survey_series_id %in% 7)), ]$survey_abbrev <- "MSSM WCVI", silent = TRUE)
+try(.d[ ((.d$survey_series_id %in% 6)), ]$survey_abbrev <- "MSSM QCS", silent = TRUE)
 
 dsamp <- .d |> dplyr::distinct()
 

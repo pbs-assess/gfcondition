@@ -61,6 +61,6 @@ which_surveys <- function(data){
       change_prop = (prop_pos - max_prop_pos)/max_prop_pos
     )
 
-  .data$species <- species
+  .data$species <- data$species_common_name[1]
   .data
 }

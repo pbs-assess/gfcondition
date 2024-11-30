@@ -24,7 +24,7 @@ dir.create(paste0("data-generated/density-index/"), showWarnings = FALSE)
 source("analysis/00-species-list.R")
 
 # # # # or override with custom subset
-# species_list <- list(
+species_list <- list(
 # "Lingcod"
 # "Pacific Cod",
 # # "Dover Sole",#
@@ -33,7 +33,7 @@ source("analysis/00-species-list.R")
 # # "Southern Rock Sole",#
 # # "Slender Sole",#
 # # "Pacific Sanddab",#
-# "Pacific Halibut"#
+"Pacific Halibut"#
 # # "Butter Sole",
 # # "Pacific Hake",#
 # # # "Pacific Tomcod",
@@ -41,7 +41,7 @@ source("analysis/00-species-list.R")
 # # "Longnose Skate",
 # # "Big Skate",
 # # "Sandpaper Skate"
-# )
+)
 
 # Function for running species density models --------
 
@@ -132,51 +132,8 @@ fit_all_distribution_models <- function(species, only_sampled) {
   custom_maturity_code <- NULL
   custom_length_threshold <- NULL
 
-  # overwrite for certain species
-  if (species == "North Pacific Spiny Dogfish") {
-    custom_maturity_code <- c(NA, 55)
-    # # custom_length_threshold <- c(70.9, 86.2)
-    # # set_family <- delta_lognormal_mix()
-    # # set_family2 <- delta_lognormal()
-  }
-
-  if (species == "Big Skate") {
-    # # McFarlane and King 2006 -- shouldn't be relied on
-    # Ebert et al. 2008
-    custom_length_threshold <- c(102.9, 113.1)
-  }
-
-  if (species == "Longnose Skate") {
-    # # McFarlane and King 2006
-    # custom_length_threshold <- c(65, 83)
-    # Arrington 2020
-    custom_length_threshold <- c(85, 102)
-  }
-
-  if (species == "Sandpaper Skate") {
-    # Perez 2005
-    custom_length_threshold <- c(49.2, 46.7)
-  }
-
-  if (species == "Spotted Ratfish") {
-    # King and McPhie 2015
-    custom_length_threshold <- c(30.2, 39.3)
-  }
-
-  if (species == "Shortraker Rockfish") {
-    # McDermott 1994:  Hutchinson 2004 F 44.9
-    # Conrath 2017 for female,
-    # Haldorson and Love reported 47 but based on
-    # Westrheim, 1975 for both sexes = 45
-    custom_length_threshold <- c(45, 49.9)
-  }
-
-  # if (species == "Pacific Halibut") {
-  ## age at 50% lowered to 10.3 years according to histology
-  #   # Takada 2017 for females, males less precise.. btw 70-79
-  #   # no accurate values for males available so wont use for now
-  #   custom_length_threshold <- c(70, 96.7)
-  # }
+  source("analysis/00-custom-maturities.R")
+  replace_with_custom_maturity(species)
 
   # if (grepl("Skate", species, fixed = TRUE)) {}
 
@@ -354,6 +311,8 @@ fit_all_distribution_models <- function(species, only_sampled) {
   ds$area_swept_km2 <- ds$area_swept / 1000000  # converts m2 to km2
   ds$offset <- log(ds$area_swept_km2*100) # offset in ha
   ds$survey_type <- relevel(ds$survey_type, "SYN")
+
+  # browser()
 
   # Which surveys to include? ----
   # keep only surveys that caught this species within years of interest
@@ -1290,63 +1249,9 @@ if(maturity_possible) {
 
 
 ## Run with pmap -----
-arg_list <- list(species = species_list, only_sampled = FALSE)
+# arg_list <- list(species = species_list, only_sampled = FALSE)
+# pmap(arg_list, fit_all_distribution_models)
 
-pmap(arg_list, fit_all_distribution_models)
-
-
-
-# Function for running species in parallel --------
-#
-# is_rstudio <- !is.na(Sys.getenv("RSTUDIO", unset = NA))
-# is_unix <- .Platform$OS.type == "unix"
-# cores <- round(parallel::detectCores() / 2)
-# (cores <- parallel::detectCores() - 6L)
-# if (!is_rstudio && is_unix) plan(multicore, workers = cores) else plan(multisession, workers = cores)
-#
-# furrr::future_pmap(species_list, fit_all_distribution_models)
-
-
-
-# dir.create(paste0("data-generated/density-depth-curves/"), showWarnings = FALSE)
-# saveRDS(g, paste0("data-generated/density-depth-curves/", spp, "-d", dens_model_name, ".rds"))
-
-
-
-
-
-# ## both mature males and females combined
-# fmm2 <- paste0("data-generated/density-models/", spp, "-all-mat", dens_model_name, "-", knot_distance, "-km.rds")
-#
-# if (!file.exists(fmm2)) {
-#   d4 <- ds %>%
-#     filter(group_name %in% c("Mature males") & year > 2001) %>%
-#     select(fishing_event_id, group_catch_est_mm = group_catch_est)
-#   d4 <- left_join(d2, d4) %>%
-#     mutate(group_catch_est2 = group_catch_est + group_catch_est_mm)
-#
-#   mm2 <- update(mf, group_catch_est2 ~ 1 + survey_type + poly(log_depth, 2), data = d4)
-#
-#   mm2 <-  refine_model(mm2)
-#   saveRDS(mm2, fmm2)
-# } else {
-#   mm2 <- readRDS(fmm2)
-# }
-#
-# pm2 <- predict(mm2, re_form_iid = NA, newdata =filter(grid, year > 2001), return_tmb_object = TRUE)
-#
-# map_density(pm2, "all-mat") +
-#   labs(title = paste0(species, ": mature biomass (", dens_model_name, ")"))
-#
-# ggsave(paste0("figs/density-map-", spp, "-all-mat", dens_model_name, "-", knot_distance, "-km.png"),
-#   height = fig_height, width = fig_width
-# )
-#
-# plot_index(pm2, "all-mat") + ggtitle(paste0(species, ": mature biomass (", dens_model_name, ")"))
-# ggsave(paste0("figs/density-index-", spp, "-all-mat", dens_model_name, "-", knot_distance, "-km.png"),
-#   height = fig_height / 2, width = fig_width / 2
-# )
-#
-
-
+arg_list2 <- list(species = species_list, only_sampled = TRUE)
+pmap(arg_list2, fit_all_distribution_models)
 

@@ -13,7 +13,6 @@ species_list <- list(
 # "North Pacific Spiny Dogfish"
 "Pacific Halibut"
 )
-
 # species_list <- list(species = species_list[27:length(species_list)])
 species_list <- list(species = species_list)
 
@@ -41,11 +40,11 @@ filter(!is.na(longitude), !is.na(latitude),
   ## because this survey is at different time of year than all the others
   dat <- filter(dat, !(survey_abbrev %in% c("SABLE")))
 # }
-  # temporary fix for IPHC because of sample size imbalance over time and
-  # uncertainty about how weight was measured
-  if(species == "Pacific Halibut"){
-    dat <- filter(dat, survey_abbrev != "IPHC FISS")
-  }
+  # # temporary fix for IPHC because of sample size imbalance over time and
+  # # uncertainty about how weight was measured
+  # if(species == "Pacific Halibut"){
+  #   dat <- filter(dat, survey_abbrev != "IPHC FISS")
+  # }
 
 
 check_for_duplicates <- dat[duplicated(dat$specimen_id), ]
@@ -101,49 +100,11 @@ m <- readRDS(paste0("data-generated/split-catch-data/", spp, ".rds"))$m
 }
 
 p_threshold <- mat_threshold
-custom_maturity <- NULL
-custom_length_threshold <- NULL
+custom_maturity_code <<- NULL
+custom_length_threshold <<- NULL
 
-if(species=="North Pacific Spiny Dogfish") {
-  custom_maturity <- c(NA, 55)
-}
-
-if (species == "Sandpaper Skate") {
-  # Perez 2005
-  custom_length_threshold <- c(49.2, 46.7)
-}
-
-if (species == "Big Skate") {
-  # # McFarlane and King 2006 -- shouldn't be relied on
-  # Ebert et al. 2008
-  custom_length_threshold <- c(102.9, 113.1)
-}
-if (species == "Longnose Skate") {
-  # # McFarlane and King 2006
-  # custom_length_threshold <- c(65, 83)
-  # Arrington 2020
-  custom_length_threshold <- c(85, 102)
-}
-
-if (species == "Spotted Ratfish") {
-  # King and McPhie 2015
-  custom_length_threshold <- c(30.2, 39.3)
-}
-
-if (species == "Shortraker Rockfish") {
-  # McDermott 1994:  Hutchinson 2004 F 44.9
-  # Conrath 2017 for female,
-  # Haldorson and Love reported 47 but based on
-  # Westrheim, 1975 for both sexes = 45
-  custom_length_threshold <- c(45, 49.9)
-}
-
-# if (species == "Pacific Halibut") {
-#   # Takada 2017 for females, males less precise.. btw 70-79
-#   # no accurate values for males available so wont use for now
-#   custom_length_threshold <- c(70, 96.7)
-# }
-
+source("analysis/00-custom-maturities.R")
+replace_with_custom_maturity(species)
 
 ## could use separate estimates for each year
 # year_re <- TRUE
@@ -220,7 +181,7 @@ if (split_by_maturity) {
                              type = "length",
                              sample_id_re = sample_id_re,
                              usability_codes = NULL,
-                             custom_maturity_at = custom_maturity,
+                             custom_maturity_at = custom_maturity_code,
                              year_re = FALSE
           )
           # gfplot::plot_mat_ogive(m)
@@ -254,7 +215,7 @@ if (split_by_maturity) {
         type = "length",
         sample_id_re = sample_id_re,
         usability_codes = NULL,
-        custom_maturity_at = custom_maturity,
+        custom_maturity_at = custom_maturity_code,
         year_re = TRUE
       )
 
@@ -285,7 +246,7 @@ if (split_by_maturity) {
         type = "length",
         sample_id_re = sample_id_re,
         usability_codes = NULL,
-        custom_maturity_at = custom_maturity
+        custom_maturity_at = custom_maturity_code
       )
       }
       # apply global estimates to all catches
@@ -548,7 +509,7 @@ ggplot(dat |> mutate(weight = weight/1000) |> filter(
                  ifelse(is_heavy_tail, " heavy tailed", " normal")
                  #, " (trimmed at ", lower_quantile, " and ", upper_quantile, " quantiles)"
                  )) +
-  ggsidekick::theme_sleek() + theme(legend.position = c(0.2,0.8))
+  ggsidekick::theme_sleek() + theme(legend.position = "inside", legend.position.inside = c(0.2,0.8))
 # browser()
 ggsave(paste0("figs/cond-black-swan-",
               ifelse(is_heavy_tail, "t", "norm"),
@@ -579,7 +540,7 @@ ggplot(dat |> mutate(weight = weight/1000) |> filter(
                  #, " (trimmed at ", lower_quantile, " and ", upper_quantile, " quantiles)"
   )) +
   # facet_wrap(~sex) +
-  ggsidekick::theme_sleek() + theme(legend.position = c(0.2,0.8))
+  ggsidekick::theme_sleek() + theme(legend.position = "inside", legend.position.inside = c(0.2,0.8))
 
 ggsave(paste0("figs/cond-black-swan-",
               ifelse(is_heavy_tail, "t", "norm"),
