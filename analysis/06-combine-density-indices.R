@@ -119,7 +119,8 @@ d0 <- purrr::pmap_dfr(
   combine_indices,
   model_type = "density",
   file_prefix = "data-generated/density-index/",
-  .id = "model") %>% filter(group == "total")
+  .id = "model") %>% filter(group == "total") %>%
+  mutate(model_string = paste0("1-", model_string))
 
 # saveRDS(d0, paste0("data-generated/density-indices-total-", model_string_fixed, ".rds"))
 
@@ -131,7 +132,8 @@ d1 <- purrr::pmap_dfr(
   combine_indices,
   model_type = "density",
   file_prefix = "data-generated/density-index/",
-  .id = "model")
+  .id = "model")%>%
+  mutate(model_string = paste0("3-", model_string))
 
 # saveRDS(d1, paste0("data-generated/density-indices-", model_string_fixed, ".rds"))
 
@@ -144,7 +146,8 @@ d2 <- purrr::pmap_dfr(
   combine_indices,
   model_type = "density",
   file_prefix = "data-generated/density-index/",
-  .id = "model")
+  .id = "model")%>%
+  mutate(model_string = paste0("2-", model_string))
 
 # saveRDS(d2, paste0("data-generated/density-indices-", model_string_fixed, ".rds"))
 
@@ -162,17 +165,17 @@ species_to_plot <- species_to_plot2 <- species_list
 # manuscript version
 set_name <- "all-"
 set_ncol <- 5
-set_legend_position <- c(0.6,0.05)
+set_legend_position <- c(0.5,0.05)
 fig_height <- 8*1.4
 fig_width <- 10
 
-# wide version
-species_to_plot2 <- NA # remove total abundance
-set_name <- "all-wide-"
-set_ncol <- 8
-set_legend_position <- c(0.55,0.08)
-fig_height <- 8
-fig_width <- 16
+# # wide version
+# species_to_plot2 <- NA # remove total abundance
+# set_name <- "all-wide-"
+# set_ncol <- 8
+# set_legend_position <- c(0.55,0.08)
+# fig_height <- 8
+# fig_width <- 16
 
 
 # species_to_plot <- Flatfish
@@ -192,20 +195,19 @@ fig_width <- 16
 # # set_ncol <- 5
 # # set_legend_position <- c(0.7, 0.1)
 
-
 d |>
   filter(species %in% species_to_plot) |>
   mutate(
-  # group = forcats::fct_relevel(group, "immatures", "mature males", "mature females"),
-species = ifelse(species == "Rougheye/Blackspotted Rockfish Complex",
-                            "Rougheye/Blackspotted", species
-  ),
-  group = factor(group, levels = c( "mature females","mature males", "immatures"),
-                 labels = c("Mature females", "Mature males", "Immatures"))
+    # group = forcats::fct_relevel(group, "immatures", "mature males", "mature females"),
+    species = ifelse(species == "Rougheye/Blackspotted Rockfish Complex",
+                     "Rougheye/Blackspotted", species
+    ),
+    group = factor(group, levels = c( "mature females","mature males", "immatures"),
+                   labels = c("Mature females", "Mature males", "Immatures"))
   ) |>
-ggplot(aes(year, est/1000*4,
-           ymin = lwr/1000*4,
-           ymax = upr/1000*4)) +#convert to tons, multiply by grid cell area
+  ggplot(aes(year, est/1000*4,
+             ymin = lwr/1000*4,
+             ymax = upr/1000*4)) +#convert to tons, multiply by grid cell area
   geom_ribbon(data = filter(d0, species %in% species_to_plot2), alpha = 0.08) +
   geom_line(data = filter(d0, species %in% species_to_plot2), colour = "black", aes(linetype = "Total")) + #linetype = "dotted"
   geom_line(aes(colour = group, linetype = "Split")) +
@@ -219,8 +221,8 @@ ggplot(aes(year, est/1000*4,
     direction =-1,
     option = "D") +
   scale_fill_viridis_d(# end = 0.99,
-                       direction =-1,
-                       option = "D") +
+    direction =-1,
+    option = "D") +
   # scale_color_viridis_d(option = "C", direction =-1, end = 0.9) +
   # scale_fill_viridis_d(option = "C", direction =-1, end = 0.9) +
   # guides(linetype = guide_legend(order = 1),colour = guide_legend(order = 2),fill = guide_legend(order = 2),fill = guide_legend(alpha = 2)) +
@@ -250,65 +252,6 @@ ggsave(paste0("figs/density-indices-",
        # height = fig_height*.65, width = fig_width*1.1
        height = fig_height, width = fig_width
 )
-
-
-set_legend_position <- c(0.7, 0.05)
-
-d1 |> bind_rows(d2) |>
-  filter(!(species %in% species_to_remove)) |>
-  # bind_rows(d0) |>
-  mutate(
-  # group = forcats::fct_relevel(group, "immatures", "mature males", "mature females"),
-  species = ifelse(species == "Rougheye/Blackspotted Rockfish Complex",
-                   "Rougheye/Blackspotted", species
-  ),
-  group = factor(group, levels = c("immatures", "mature males", "mature females", "total"),
-                        labels = c("Immatures", "Mature males", "Mature females", "Total")),
-  # group = factor(group, levels = c( "mature females","mature males", "immatures", "total"),
-  #                labels = c("Mature females", "Mature males", "Immatures", "Total"))
-) |>
-  select(-group, -model, -type) |>
-  group_by(model_string, year, species) |>
-  summarise_all("sum") |>
-  ggplot(aes(year, est/1000*4,
-             linetype = model_string
-             )) +#convert to tons, multiply by grid cell area
-  geom_line(
-    # aes(colour = model_string),
-            linewidth = 0.7) +
-  geom_line(data = d0, aes(year, est/1000*4), colour = "black",
-            linetype = "solid", alpha = 0.3, linewidth = 0.7) +
-  geom_ribbon(data = d0, aes(
-    ymin = lwr/1000*4,
-    ymax = upr/1000*4
-    ),alpha = 0.1) +
-  # geom_line(aes(colour = group, linetype = model_string)) +
-  # geom_ribbon(alpha = 0.1) +
-  facet_wrap(~species, scales = "free_y", ncol = 5) +
-  # scale_linetype(limits = c("Total")) +
-  scale_linetype_manual(values=c(1,2,3),
-      labels = c("Total density (all data)","Spilt (all data)","Split (measured survey-years)")
-) +
-  scale_alpha_discrete(range = c(0.1, 0.2)) +
-  # scale_color_discrete(
-  #   labels = c("Split (measured survey-years)","Total density (all data)","Spilt (all data)")) +
-  # scale_fill_viridis_d(option = "C", direction =-1, end = 0.9) +
-  # guides(linetype = guide_legend(order = 1),colour = guide_legend(order = 2),fill = guide_legend(order = 2),fill = guide_legend(alpha = 2)) +
-  theme(legend.position = set_legend_position)+
-  labs(
-    fill = NULL,
-    alpha = NULL,
-    colour = NULL,
-    linetype = NULL,
-    x="Year", y="Relative biomass")
-
-ggsave(paste0("figs/all-density-indices",
-              "-summed-comparison-2024-09",
-              "-w-pcod",
-              "-BW.png"),
-       height = fig_height*1.4, width = fig_width*1
-)
-
 
 hex <- scales::hue_pal()(2)
 
@@ -342,11 +285,12 @@ d1 |> bind_rows(d2) |>
   # geom_ribbon(alpha = 0.1) +
   facet_wrap(~species, scales = "free_y", ncol = 5) +
   # scale_linetype(limits = c("Total")) +
-  scale_linetype_manual(values=c(1,2,3),
+  scale_linetype_manual(values=c(3,1,4),
                         labels = c("Total density (all data)","Spilt (all data)", "Split (measured survey-years)")
   ) +
   scale_alpha_discrete(range = c(0.1, 0.2)) +
-  scale_color_manual(values= c("#A9A9A9", hex[2],hex[1]),
+  scale_color_manual(values= c("black", hex[2],hex[1]),
+  # scale_color_manual(values= c("black","#A9A9A9","#A9A9A9"),
     labels = c("Total density (all data)","Spilt (all data)","Split (measured survey-years)")) +
   scale_fill_viridis_d(option = "C", direction =-1, end = 0.9) +
   labs(
@@ -358,11 +302,18 @@ d1 |> bind_rows(d2) |>
   # guides(linetype = guide_legend(order = 1),colour = guide_legend(order = 2),fill = guide_legend(order = 2),fill = guide_legend(alpha = 2)) +
   theme(legend.position = set_legend_position )
 
-ggsave(paste0("figs/all-density-indices",
+# ggsave(paste0("figs/man/all-density-indices",
+#               "-summed-comparison-2024-09",
+#               "-w-pcod-BW",
+#               ".png"),
+#         height = fig_height, width = fig_width
+# )
+
+ggsave(paste0("figs/man/all-density-indices",
               "-summed-comparison-2024-09",
               "-w-pcod",
               ".png"),
-       height = fig_height*1.4, width = fig_width*1
+       height = fig_height, width = fig_width
 )
 
 
