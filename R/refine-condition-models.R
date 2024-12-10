@@ -47,7 +47,7 @@ refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distanc
   }
 
   if (nrow(t)>3){
-    if (t$estimate[t$term == "sigma_O"] < 0.005 | !all(s)) {
+    if (t$estimate[t$term == "sigma_O"] < 0.005 | !all(unlist(s[1:7]))) {
       # drop spatial field
       try(m <- update(m,
                       formula = set_formula,
@@ -65,7 +65,7 @@ refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distanc
     }
   }
 
-  if (!all(s)) {
+  if (!all(unlist(s[1:7]))) {
     # strengthen prior
     try(m <- update(m,
                     formula = set_formula,
@@ -82,13 +82,13 @@ refine_cond_model <- function(m, set_formula = cond_formula, dist = knot_distanc
     t <- tidy(m, "ran_pars", conf.int = TRUE)
   }
 
-  if (!all(s)){
+  if (!all(unlist(s[1:7]))) {
     # drop spatiotemporal field instead but add ar1 on time intercepts
     try(m <- update(m,
                     formula = set_formula,
                     # formula = update(set_formula,    ~ . + as.factor(year)),
                     time_varying = ~ 1,
-                    time_varying_type = "ar1",
+                    time_varying_type = "rw",
                     weights = m$data$sample_multiplier,
                     spatial = "on",
                     spatiotemporal = "off",

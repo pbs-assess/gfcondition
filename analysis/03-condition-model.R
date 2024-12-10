@@ -9,45 +9,45 @@ devtools::load_all(".")
 source("analysis/00-species-list.R")
 
 # # # # or override with custom subset
-# species_list <- list(
-# "North Pacific Spiny Dogfish"
-# # "Pacific Ocean Perch",
-# # "Pacific Cod",
-# # "Walleye Pollock",
-# # "Sablefish",
-# # "Lingcod",
-# # "Bocaccio",
-# # "Canary Rockfish",
-# # "Quillback Rockfish",
-# # "Redbanded Rockfish",
-# # "Redstripe Rockfish",
-# # "Silvergray Rockfish",
-# # "Shortspine Thornyhead",
-# # "Widow Rockfish",
-# # "Yelloweye Rockfish",
-# # "Yellowmouth Rockfish",
-# # "Yellowtail Rockfish",
-# # "Shortraker Rockfish"
-# # "Rosethorn Rockfish",
-# # "Sharpchin Rockfish",
-# # "Darkblotched Rockfish",
-# # "Greenstriped Rockfish",
-# # "Petrale Sole",
-# # "Arrowtooth Flounder",
-# # "English Sole",
-# # "Dover Sole",
-# # "Rex Sole",
-# # "Flathead Sole",
-# # "Southern Rock Sole",
-# # "Slender Sole",
-# # "Pacific Sanddab",
-# "Pacific Halibut"
-# # "Pacific Hake",
-# # "Spotted Ratfish",
-# # "Longnose Skate",
-# # "Big Skate",
-# # "Sandpaper Skate"
-# )
+species_list <- list(
+# # "North Pacific Spiny Dogfish"
+# # # "Pacific Ocean Perch",
+# # # "Pacific Cod",
+# # # "Walleye Pollock",
+# # # "Sablefish",
+# # # "Lingcod",
+# # # "Bocaccio",
+# # # "Canary Rockfish",
+# # # "Quillback Rockfish",
+# # # "Redbanded Rockfish",
+# # # "Redstripe Rockfish",
+# # # "Silvergray Rockfish",
+# # # "Shortspine Thornyhead",
+# # # "Widow Rockfish",
+# # # "Yelloweye Rockfish",
+# # # "Yellowmouth Rockfish",
+# # # "Yellowtail Rockfish",
+# # # "Shortraker Rockfish"
+# # # "Rosethorn Rockfish",
+# # # "Sharpchin Rockfish",
+# # # "Darkblotched Rockfish",
+# # # "Greenstriped Rockfish",
+# # # "Petrale Sole",
+# # # "Arrowtooth Flounder",
+# # # "English Sole",
+# # # "Dover Sole",
+# # # "Rex Sole",
+# # # "Flathead Sole",
+# # # "Southern Rock Sole",
+# # # "Slender Sole",
+# # # "Pacific Sanddab",
+"Pacific Halibut"
+# # # "Pacific Hake",
+# # # "Spotted Ratfish",
+# # # "Longnose Skate",
+# # # "Big Skate",
+# # # "Sandpaper Skate"
+)
 
 index_list <- expand.grid(species = species_list,
                           maturity = c("imm",
@@ -61,13 +61,13 @@ index_list <- expand.grid(species = species_list,
   ) %>%
   distinct()
 
-# index_list$add_density <- FALSE
-index_list$add_density <- TRUE
+index_list$add_density <- FALSE
+# index_list$add_density <- TRUE
 
-# # do both density agnostic and dependent versions
-# index_list2 <- index_list
-# index_list2$add_density <- TRUE
-# index_list <- bind_rows(index_list, index_list2)
+# do both density agnostic and dependent versions
+index_list2 <- index_list
+index_list2$add_density <- TRUE
+index_list <- bind_rows(index_list, index_list2)
 
 # Function for generating condition indices ----
 
@@ -80,6 +80,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   # females <- TRUE
   rm(m)
   # this only works if called to local environment
+  set_utm_crs <- 32609
 
   # stop_early <- TRUE
   stop_early <- FALSE
@@ -262,7 +263,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     ds$Y <- NULL
     ds2 <- sdmTMB::add_utm_columns(ds,
                                    ll_names = c("longitude", "latitude"),
-                                   utm_crs = 32609)
+                                   utm_crs = set_utm_crs)
 
     nd0 <- ds2 %>%
       select(year, survey_abbrev, fishing_event_id, X, Y, log_depth) %>%
@@ -362,11 +363,11 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     d2 <- readRDS(f)
   }
 
-  # temporary fix for IPHC because of sample size imbalance over time and
-  # uncertainty about how weight was measured
-  if(species == "Pacific Halibut"){
-    d2 <- filter(d2, survey_abbrev != "IPHC FISS")
-  }
+  # # fix for IPHC because of sample size imbalance over time and
+  # # uncertainty about how weight was measured
+  # if(species == "Pacific Halibut"){
+  #   d2 <- filter(d2, survey_abbrev != "IPHC FISS")
+  # }
 
   # Select relevant data and grid ----
   if (mat_class == "mat") {
@@ -621,7 +622,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
       group = group_label,
       survey_group = fct_reorder(droplevels(survey_group), .x = n, .fun = sum, .desc = TRUE))
 
-
   dir.create(paste0("data-generated/specimen-counts/"), showWarnings = FALSE)
   saveRDS(sg, paste0("data-generated/specimen-counts/", spp, "-", group_tag, ".rds"))
 
@@ -779,7 +779,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
   # rho <- 2 * plogis(p$rho_time_unscaled) - 1
   # rho
 
-  if(!all(s)){
+  if(!all(unlist(s[1:7]))){
     warning(paste(species, maturity,
                      if(maturity=="mat"){ifelse(just_males, "males", "females")},
                      "model did not converge"))
@@ -889,7 +889,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     m2$sd_report
     tidy(m2, "ran_pars", conf.int = TRUE)
 
-    if(!all(s)){
+    if(!all(unlist(s[1:7]))){
       warning(paste(species, maturity,
                        if(maturity=="mat"){ifelse(just_males, "males", "females")},
                        "model with density did not converge."))
@@ -961,7 +961,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     model_name, "-", knot_distance, "-km.rds"
   )
 
-  if (!file.exists(i1)) {
+  # if (!file.exists(i1)) {
 
   pc <- predict(m, newdata = grid, return_tmb_object = TRUE)
 
@@ -979,18 +979,37 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 
   # Map model predictions ----
 
-  dset <- readRDS(paste0("data-generated/density-data/", spp, ".rds")) %>%
-    filter(year >= min(m$data$year), year <= max(m$data$year))
+  # dset <- readRDS(paste0("data-generated/density-data/", spp, ".rds")) %>%
+  #   filter(year >= min(m$data$year), year <= max(m$data$year))
+  #
+  # unique(dset$survey_abbrev)
+  #
+  # # all sets
+  # set_list <- dset %>%
+  #   select(fishing_event_id, longitude, latitude, X, Y, year, catch_weight, catch_count) %>%
+  #   distinct() %>%
+  #   mutate(
+  #     fishing_event_id = as.factor(fishing_event_id),
+  #     lon = longitude, lat = latitude)
 
+  dset <- readRDS(paste0("data-generated/all-sets-used.rds")) %>%
+      filter(year >= min(m$data$year), year <= max(m$data$year)) %>%
+    filter(
+      species_common_name == tolower(species)&
+      !is.na(longitude)&!is.na(latitude)) %>%
+    sdmTMB::add_utm_columns(.,
+                            ll_names = c("longitude", "latitude"),
+                            utm_crs = set_utm_crs)
   unique(dset$survey_abbrev)
 
-  # all sets
   set_list <- dset %>%
     select(fishing_event_id, longitude, latitude, X, Y, year, catch_weight, catch_count) %>%
     distinct() %>%
     mutate(
       fishing_event_id = as.factor(fishing_event_id),
       lon = longitude, lat = latitude)
+
+
 
   # # just sampled sets
   # set_list <- d2 %>% select(fishing_event_id, longitude, latitude, X, Y) %>% distinct() %>%
@@ -1008,7 +1027,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     caught = ifelse(catch_count > 0 | catch_weight > 0, 1, 0),
     count = ifelse(is.na(count), 0, count),
     present = ifelse(count > 0, 1, ifelse(caught == 1, 0, NA_integer_))
-  )
+  ) %>% filter(caught == 1)
 
   # model_dat %>% group_by(present, caught) %>% summarise(n = n()) %>% View()
   p2$log_cond <- log(p2$cond)
@@ -1045,7 +1064,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
          height = fig_height*1.5, width = fig_width
   )
 
-}
+# }
 
   # Get coastwide index ----
 
@@ -1061,12 +1080,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
     saveRDS(ind2, i1)
   } else {
     ind2 <- readRDS(i1)
-  #
-  #   ind2$species <- species
-  #   ind2$group <- group_label
-  #   ind2$model_string <- model_name
-  #
-  #   saveRDS(ind2, i1)
   }
 
   ggplot(ind2, aes(year, est)) +
@@ -1078,93 +1091,10 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
          # subtitle = paste("conditional R2:", r2$r2[1], "marginal R2:", r2$r2[2])
          )
 
-  ggsave(paste0("figs/cond-", model_name, "/condition-index-", spp, "-",
-                group_tag, "-", model_name, "-", knot_distance, "-km.png"),
+  ggsave(paste0("figs/cond-", model_name, "/", spp, "-",
+                group_tag, "-cond-index-", model_name, "-", knot_distance, "-km.png"),
     height = fig_height / 2, width = fig_width / 2
   )
-
-
-  # # Get survey-specific condition indices ----
-  # i2 <- paste0("data-generated/cond-index/", model_name, "/survey-cond-indices-", spp, "-", group_tag, "-", model_name, "-", knot_distance, "-km.rds")
-  #
-  # if(!file.exists(i2)) {
-  #
-  # ## TODO: if we want to split by stock area, will need to edit grid first to add species specific stock areas
-  # preds <- grid %>%
-  #   split(.$survey) %>%
-  #   lapply(function(x) predict(m, newdata = x, return_tmb_object = TRUE))
-  #
-  # inds <- purrr::map_dfr(preds, function(.x)
-  #   get_index(.x, area = .x$data$prop_density_by_survey, bias_correct = TRUE), .id = "region")
-  #
-  # survey_years <- m$data %>% select(survey_abbrev, year) %>% distinct() %>%
-  #   mutate(region = ifelse(survey_abbrev == "HS MSA", "SYN HS",
-  #                   ifelse(survey_abbrev == "MSSM QCS", "SYN QCS",
-  #                   ifelse(survey_abbrev == "MSSM WCVI", "SYN WCVI",
-  #                          survey_abbrev))))
-  #
-  # ind3 <- left_join(survey_years, inds, multiple = "all") %>%
-  #   filter(!is.na(est))
-  #
-  # saveRDS(ind3, i2)
-  #
-  # } else {
-  # ind3 <- readRDS(i2)
-  # }
-  #
-  # ggplot(ind3, aes(year, est, fill = region)) +
-  #   geom_line(aes(colour = region)) +
-  #   geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.1) +
-  #   xlab("Year") +
-  #   ylab("Predicted average condition factor") +
-  #   labs(title = paste0(species, ": ", group_label, " ", "-", model_name))
-  #
-  # ggsave(paste0("figs/condition-index-", spp, "-split-", group_tag, "-", model_name, "-", knot_distance, "-km.png"),
-  #        height = fig_height / 2, width = fig_width/1.5
-  # )
-
-
-  #   map(get_index(., area = .$data$prop_density, bias_correct = FALSE)) %>%
-  #   bind_rows(.id = "survey")
-
-
-  # saveRDS(p2, paste0("data-generated/cond-predictions/", spp,
-  #  "-pc", "-", group_tag, "-", model_name, "-", knot_distance, "-km.rds"))
-  # saveRDS(ind2, paste0("data-generated/cond-index/", model_name, "/", spp, "-pc",
-  #  "-", group_tag, "-", model_name, "-", knot_distance, "-km.rds"))
-
-
-  ## probably don't need these for every model but keeping here for interest
-  #
-  # ggplot(p2, aes(X, Y, colour = log_density, fill = log_density)) +
-  #   geom_tile(width = 2, height = 2, alpha = 1) +
-  #   # facet_wrap(~year) +
-  #   scale_fill_viridis_c() +
-  #   scale_colour_viridis_c()
-  #
-  ## ggsave(paste0("figs/density-map-", spp, "-", group_tag, "-", model_name,
-  #   "-", knot_distance, "-km.png"), height = fig_height, width = fig_width)
-  # ggplot(p2, aes(X, Y,
-  #                colour = omega_s,
-  #                fill = omega_s)) +
-  #   geom_tile(width = 2, height = 2, alpha = 1) +
-  #   # facet_wrap(~year) +
-  #   scale_fill_gradient2() +
-  #   scale_colour_gradient2()
-  #
-  ## ggsave(paste0("figs/condition-omega-map-", spp, "-", group_tag,
-  ##  model_name, "-", knot_distance, "-km.png"), height = fig_height, width = fig_width)
-  #
-  #
-  # ggplot(p2, aes(X, Y, colour = epsilon_st, fill = epsilon_st)) +
-  #   geom_tile(width = 2, height = 2, alpha = 1) +
-  #   facet_wrap(~year) +
-  #   scale_fill_gradient2() +
-  #   scale_colour_gradient2()
-  #
-  ## ggsave(paste0("figs/condition-epsilon-map-", spp, "-", group_tag,
-  ##  model_name, "-", knot_distance, "-km.png"), height = fig_height, width = fig_width)
-
 
   # plot_covariates <- TRUE
   plot_covariates <- FALSE
@@ -1228,10 +1158,6 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
                               length.out = 50
           ),
           ann_log_density_c = 0,
-          # ann_log_density_c = seq(min(d$ann_log_density_c),
-          #                         max(d$ann_log_density_c),
-          #                         length.out = 50
-          # ),
           dens_dev = 0,
           year = 2021L # a chosen year
         )
@@ -1277,7 +1203,7 @@ calc_condition_indices <- function(species, maturity, males, females, add_densit
 # Run with pmap -----
 
 # index_list <- index_list[2, ]
-pmap(index_list, calc_condition_indices)
+# pmap(index_list, calc_condition_indices)
 
 # Run with furrr ----
 
