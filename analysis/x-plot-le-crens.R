@@ -10,6 +10,7 @@ theme_set(ggsidekick:::theme_sleek())
 source("analysis/00-species-list.R")
 
 included_only <- TRUE
+K <- TRUE
 
 ## while the maturity data is loaded, might as well produce all the Le Cren's plots together
 dat <- readRDS("data-generated/all-samples-used.rds") %>%
@@ -21,7 +22,7 @@ dat <- readRDS("data-generated/all-samples-used.rds") %>%
 
 # temporary fix for IPHC because of sample size imbalance over time and
 # uncertainty about how weight was measured
-  dat <- filter(dat, !(survey_abbrev == "IPHC FISS" & species_common_name == tolower("Pacific Halibut")))
+# dat <- filter(dat, !(survey_abbrev == "IPHC FISS" & species_common_name == tolower("Pacific Halibut")))
 
 
 
@@ -50,7 +51,7 @@ for (i in seq_along(spp)){
     mutate(sex_label = as.factor(ifelse(sex == 1, "Male", ifelse(sex == 2, "Female", "Unknown"))))
 
   # browser()
-
+  if(!K) {
   p2[[i]] <- dat %>% filter(species_common_name == spp[i]) |>
     mutate(weight = weight/1000,
            sex_label = as.factor(ifelse(sex == 1, "Male", ifelse(sex == 2, "Female", "Unknown")))
@@ -74,6 +75,24 @@ for (i in seq_along(spp)){
     ggtitle(paste0(toupper(spp[i]))) +
     ggsidekick::theme_sleek() + theme(legend.position = c(0.2,0.8))
   # }
+  } else {
+    .ds <- .ds
+
+  p2[[i]] <- .ds |>
+    filter(sex %in% c(1,2)) |>
+    mutate(K = (weight*1000 / length^3) *100) |>
+    ggplot(aes(cond_fac, K, colour = length)) +
+    geom_abline(slope = 1, intercept = 0) +
+    geom_point() +
+    scale_colour_viridis_c() +
+    facet_wrap(~sex_label) +
+    labs(x = "Le Cren's", y = "Fulton's K") +
+    # coord_fixed(xlim = c(min())) +
+    tune::coord_obs_pred() +
+    ggtitle(paste0(toupper(spp[i]))) +
+    ggsidekick::theme_sleek() #+ theme(legend.position = c(0.2,0.8))
+
+  }
 
   if(included_only){
     if(spp[i] %in% tolower(c(species_to_remove))) { p2[[i]] <- NULL }
@@ -82,6 +101,14 @@ for (i in seq_along(spp)){
 
 p2 <- p2 %>% discard(is.null)
 
+
+design = "
+AAAAAA
+#BBBBB
+"
+
+
+if(!K) {
 y_lab_big <- ggplot() +
   annotate(geom = "text", x = 1, y = 1, size = 5,
            label = "Weight (kg)", angle = 90) +
@@ -93,13 +120,6 @@ x_lab_big <- ggplot() +
            label = "Length (cm)") +
   coord_cartesian(clip = "off")+
   theme_void()
-
-
-design = "
-AAAAAA
-#BBBBB
-"
-
 (g <- ((y_lab_big |
           wrap_plots(gglist = p2, ncol = 5) &
           theme(text = element_text(size = 9),
@@ -109,10 +129,44 @@ AAAAAA
   /x_lab_big + plot_layout(heights = c(1,0.05), design = design, guides = "collect")
 )
 
+}else{
+  y_lab_big <- ggplot() +
+    annotate(geom = "text", x = 1, y = 1, size = 5,
+             label = "Fulton's K", angle = 90) +
+    coord_cartesian(clip = "off")+
+    theme_void()
+
+  x_lab_big <- ggplot() +
+    annotate(geom = "text", x = 1, y = 1, size = 5,
+             label = "Le Cren's") +
+    coord_cartesian(clip = "off")+
+    theme_void()
+
+  (g <- ((y_lab_big |
+            wrap_plots(gglist = p2, ncol = 5) &
+            theme(text = element_text(size = 9),
+                  legend.position = "none",
+                  axis.title = element_blank())) +
+           plot_layout(widths = c(0.05, 1)))
+    /x_lab_big + plot_layout(heights = c(1,0.05), design = design)
+  )
+
+}
+
+
 
 # (g <- plot_list(gglist = p2, ncol = 3)+ patchwork::plot_layout())
+
+if(!K) {
 if(included_only){
   ggsave("figs/man/all-Le-Crens-filtered3.png", height = 16, width = 12)
 } else{
   ggsave("figs/all-Le-Crens-all-20-trim.png", height = 16, width = 16)
+}
+} else {
+  if(included_only){
+    ggsave("figs/man/all-K-vs-lecrens-filtered.png", height = 14, width = 15)
+  } else{
+    ggsave("figs/all-K-vs-lecrens.png", height = 16, width = 16)
+  }
 }
