@@ -24,7 +24,14 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
 
   if(only_synoptic) {
     dens_model_name0 <- paste0(dens_model_name0, "syn-")
-    dens_model_name <- paste0(dens_model_name0, "syn-split-") # TODO: drop syn nest time
+
+    if(only_sampled) {
+      dens_model_name <- paste0(dens_model_name0, "only-sampled-")
+    } else {
+      # use SD to choose between aggregating by year or survey first, then survey, then all
+      dens_model_name <- paste0(dens_model_name0, "split-")
+    }
+
   } else {
   if(only_sampled) {
     dens_model_name <- paste0(dens_model_name0, "only-sampled-")
@@ -141,7 +148,6 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     geom_histogram(aes(offset)) +
     facet_wrap(~year)
 
-  # Make grid ----
   ds$X <- NULL
   ds$Y <- NULL
 
@@ -203,7 +209,8 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
   i2 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_name, "/mat-m/i-", m2, ".rds")
   i3 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_name, "/imm/i-", m3, ".rds")
 
-  # Generate synoptic grid for all modelled years ----
+  # Make grid ----
+  # Use synoptic grid for all modelled years
   grid <- replicate_df(gfplot::synoptic_grid,
                        time_name = "year",
                        time_values = min(d$year):max(d$year)

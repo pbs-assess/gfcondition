@@ -522,6 +522,10 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
         cell_mean_density = mean(density),
         log_mean_density = log(cell_mean_density)
       ) |>
+      ungroup() |>
+      group_by(year, survey) |>
+      mutate(survey_density = sum(density),
+             prop_density_by_survey = density / survey_density) |>
       ungroup()
 
     } else{
@@ -536,12 +540,16 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
                prop_density = density / sum_density
         ) |>
         ungroup() |>
-      group_by(X, Y) |>
+        group_by(X, Y) |>
         mutate(
           log_density = log(density),
           cell_mean_density = mean(density),
           log_mean_density = log(cell_mean_density)
         ) |>
+        ungroup() |>
+        group_by(year, survey) |>
+        mutate(survey_density = sum(density),
+               prop_density_by_survey = density / survey_density) |>
         ungroup()
     }
   }
@@ -962,6 +970,69 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
                 group_tag, "-", model_name, "-", knot_distance, "-km.png"),
     height = fig_height / 2, width = fig_width / 2
   )
+
+
+  # Get survey-specific condition indices ----
+  if(split_index_by_survey) {
+
+
+    dir.create(paste0("stock-specific/", spp, "/output/cond-index-by-survey/"), showWarnings = FALSE)
+
+    dir.create(paste0("stock-specific/", spp, "/output/cond-index-by-survey/", model_name,"/"), showWarnings = FALSE)
+
+    i2 <- paste0("stock-specific/", spp, "/output/cond-index-by-survey/", model_name,
+               "/survey-cond-indices-", spp, "-", group_tag, "-", model_name, "-", knot_distance, "-km.rds")
+
+  if(!file.exists(i2)) {
+
+  ## TODO: if we want to split by stock area, will need to edit grid first to add species specific stock areas
+  preds <- grid %>%
+    split(.$survey) %>%
+    lapply(function(x) predict(m, newdata = x, return_tmb_object = TRUE))
+
+  inds <- purrr::map_dfr(preds, function(.x)
+    get_index(.x, area = .x$data$prop_density_by_survey, bias_correct = TRUE), .id = "region")
+
+  survey_years <- m$data %>% select(survey_abbrev, year) %>% distinct() %>%
+    mutate(region = ifelse(survey_abbrev == "HS MSA", "SYN HS",
+                    ifelse(survey_abbrev == "MSSM QCS", "SYN QCS",
+                    ifelse(survey_abbrev == "MSSM WCVI", "SYN WCVI",
+                    ifelse(survey_abbrev == "HBLL OUT S", "SYN WCVI",
+                    ifelse(survey_abbrev == "HBLL OUT N", "SYN WCHG",
+                           survey_abbrev))))))
+
+  ind3 <- left_join(survey_years, inds, multiple = "all") %>%
+    filter(!is.na(est))
+
+  ind3$species <- species
+  ind3$group <- group_label
+  ind3$model_string <- model_name
+  ind3$dens_model_name <- dens_model_name
+  ind3$survey_group <- levels(sg$survey_group)[1]
+  saveRDS(ind3, i2)
+
+  } else {
+  ind3 <- readRDS(i2)
+  ind3$species <- species
+  ind3$group <- group_label
+  ind3$model_string <- model_name
+  ind3$dens_model_name <- dens_model_name
+  ind3$survey_group <- levels(sg$survey_group)[1]
+  saveRDS(ind3, i2)
+  }
+
+  ggplot(ind3, aes(year, est, fill = region)) +
+    geom_line(aes(colour = region)) +
+    geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.1) +
+    xlab("Year") +
+    ylab("Predicted average condition factor") +
+    labs(title = paste0(species, ": ", group_label, " ", "-", model_name))
+
+  ggsave(paste0("stock-specific/", spp, "/figs/condition-index-", spp, "-split-",
+                group_tag, "-", model_name, "-", knot_distance, "-km.png"),
+         height = fig_height / 2, width = fig_width/1.5
+  )
+  }
 }
 
 if(!use_parallel) {

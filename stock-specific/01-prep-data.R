@@ -123,7 +123,6 @@ dss <- split_catch_by_sex(dset, dsamp,
   # catch_variable = "est_catch_count", # could use this to avoid biomass ~ condition issue?
   # split_by_weight = FALSE, # automatically switches to TRUE for common weight-based catch variables
   split_by_sex = split_by_sex,
-  split_by_maturity = split_by_maturity,
   immatures_pooled = immatures_pooled,
   sample_id_re = set_sample_id_re, # used for maturity ogives
   year_re = mat_year_re,
