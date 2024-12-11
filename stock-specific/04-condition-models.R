@@ -966,7 +966,7 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
          # subtitle = paste("conditional R2:", r2$r2[1], "marginal R2:", r2$r2[2])
          )
 
-  ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name, "/condition-index-", spp, "-",
+  ggsave(paste0("stock-specific/", spp, "/figs/condition-index-", spp, "-",
                 group_tag, "-", model_name, "-", knot_distance, "-km.png"),
     height = fig_height / 2, width = fig_width / 2
   )
