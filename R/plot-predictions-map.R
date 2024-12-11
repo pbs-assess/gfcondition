@@ -129,7 +129,7 @@ plot_predictions <- function(pred_dat, raw_dat,
       )
     }) %>% bind_rows()
   }
-# browser()
+
   if (north_symbol) {
     north <- data.frame(
       X = c(north_symbol_coord[1], north_symbol_coord[1]),
@@ -157,14 +157,15 @@ plot_predictions <- function(pred_dat, raw_dat,
                           range(raw_dat$lat) + c(-1, 1),
                           utm_zone = utm_zone
   )
-  coast <- gfplot:::rotate_df(coast, rotation_angle, rotation_center)
-
 
   isobath <- gfplot:::load_isobath(range(raw_dat$lon) + c(-5, 5),
-                          range(raw_dat$lat) + c(-5, 5),
-                          bath = c(100, 200, 500), utm_zone = 9
+                                   range(raw_dat$lat) + c(-5, 5),
+                                   bath = c(100, 200, 500), utm_zone = utm_zone
   )
+
+  coast <- gfplot:::rotate_df(coast, rotation_angle, rotation_center)
   isobath <- gfplot:::rotate_df(isobath, rotation_angle, rotation_center)
+
 
   pred_dat <- gfplot:::rotate_df(pred_dat, rotation_angle, rotation_center)
   raw_dat <- gfplot:::rotate_df(raw_dat, rotation_angle, rotation_center)
@@ -191,9 +192,11 @@ plot_predictions <- function(pred_dat, raw_dat,
       data = pred_dat, aes_string("X", "Y",
                                   fill = fill_column,
                                   colour = fill_column, group = "id"
-      )
+      ),
+      linewidth = 0.1
     ) +
       fill_scale + colour_scale
+    # browser()
   }
   if (show_raw_data) {
     g <- g +
@@ -223,7 +226,10 @@ plot_predictions <- function(pred_dat, raw_dat,
     ) +
     geom_polygon(
       data = coast, aes_string(x = "X", y = "Y", group = "PID"),
-      fill = "grey87", col = "grey70", lwd = 0.2
+      fill = "grey85",
+      # col = NA,
+      col = "grey70",
+      lwd = 0
     ) +
     guides(shape = "none", colour = "none") +
     labs(size = pt_label, fill = fill_label) +
