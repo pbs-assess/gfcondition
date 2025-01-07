@@ -17,6 +17,12 @@ fig_width <- 5 * 2
 dir.create(paste0("figs/DFA/"), showWarnings = FALSE)
 dir.create(paste0("figs/man/"), showWarnings = FALSE)
 dir.create(paste0("data-generated/DFA/"), showWarnings = FALSE)
+
+set_group <- "immatures"
+# set_group <- "mature males"
+# set_group <- "mature females"
+
+# dfa_by_class <- function(set_group){ ### not sure why but this didn't work
 ## Choose model ----
 ## DFA settings
 
@@ -32,7 +38,7 @@ ctrl <- list(adapt_delta = 0.95, max_treedepth = 20)
 set_iter <- 10000 # min 2000
 set_chains <- 5 # 1 works
 estimate_sigma <- FALSE
-unequal_sigma <- TRUE
+# equal_sigma <- TRUE
 # use_expansion_prior <- FALSE
 # use_expansion_prior <- TRUE
 
@@ -40,11 +46,12 @@ unequal_sigma <- TRUE
 ## are we doing a DFA of biomass density rather than condition
 # density <- TRUE
 density <- FALSE
+
 ### if condition
-adjusted_for_density <- FALSE
+# adjusted_for_density <- FALSE
 # just_trend_version <- TRUE
 just_trend_version <- FALSE
-# adjusted_for_density <- TRUE
+adjusted_for_density <- TRUE
 
 # trend_count <- 1
 trend_count <- 2
@@ -58,21 +65,20 @@ obs_covs <- TRUE
 proc_covs <- FALSE
 }
 
-set_group <- "immatures"
-# set_group <- "mature males"
-# set_group <- "mature females"
 
 if(no_covs) {
   if(adjusted_for_density){
   # model_name <- "apr-2024-not-total-density"
   # model_name <- "apr-2024-cell-means"
-    model_name <- "2024-09-doy-ld0c-w-pcod-before-10pyr"
+    # model_name <- "2024-09-doy-ld0c-w-pcod-before-10pyr"
+    model_name <- "2024-09-doy-ld0c"
+
   if(set_group == "immatures"){
     y_label <- "Immature condition indices (adjusting for density)"
     # use_expansion_prior <- TRUE
     # ctrl <- list(adapt_delta = 0.99, max_treedepth = 20)
     which_flip <- 0L
-    which_flip2 <- 0L
+    which_flip2 <- 2L
   }
   if(set_group == "mature males") {
     y_label <- "Mature male condition indices (adjusting for density)"
@@ -82,35 +88,34 @@ if(no_covs) {
   if(set_group ==  "mature females") {
     y_label <- "Mature female condition indices (adjusting for density)"
     which_flip <- 0L
-    which_flip2 <- 0L
+    which_flip2 <- 2L
   }
   } else {
-  # model_name <- "apr-2024"
-  model_name <- "2024-09-w-pcod-before-10pyr"
+  # # model_name <- "apr-2024"
+  # model_name <- "2024-09-w-pcod-before-10pyr"
+    model_name <- "2024-09"
+
   if(set_group == "immatures") {
     y_label <- "Immature condition indices (not controlling for density)"
-    # use_expansion_prior <- TRUE # very bad!
-    # estimate_sigma <- TRUE # not needed with AR1
-    # unequal_sigma <- FALSE # not needed with AR1
-    which_flip <- 0L # only if estimating sigma
-    which_flip2 <- 0L # only if estimating sigma
+    which_flip <- 1L
+    which_flip2 <- 2L
   }
   if(set_group == "mature males") {
     y_label <- "Mature male condition indices (not controlling for density)"
-    # use_expansion_prior <- TRUE
     which_flip <- 0L
-    which_flip2 <- 2L
+    which_flip2 <- 0L
   }
   if(set_group ==  "mature females") {
     y_label <- "Mature female condition indices (not controlling for density)"
-    # use_expansion_prior <- FALSE
     which_flip <- 0L
     which_flip2 <- 0L
   }
   }
   } else{
     # model_name <- "apr-2024"
-    model_name <- "2024-09-w-pcod-before-10pyr"
+    # model_name <- "2024-09-w-pcod-before-10pyr"
+    model_name <- "2024-09"
+
     adjusted_for_density <- FALSE
     ctrl <- list(adapt_delta = 0.90, max_treedepth = 12)
   if(set_group == "immatures") {
@@ -132,6 +137,7 @@ if(no_covs) {
   }
 
 
+if (trend_count == 4) trend_label <- "4 trends"
 if (trend_count == 3) trend_label <- "3 trends"
 if (trend_count == 2) trend_label <- "2 trends"
 if (trend_count == 1) trend_label <- "1 trend"
@@ -144,7 +150,8 @@ if(density){
 
   set_group <- "total"
   # model_name <- "dln-dln-all-mar-2024"
-  model_name <- "dln-all-2024-09"
+  # model_name <- "dln-all-2024-09"
+  model_name <- "dln-ss5-2024-09"
   y_label <- "Total density indices"
 
   f <- list.files(
@@ -174,6 +181,9 @@ dg <- dg %>% mutate(
   ),
   species = ifelse(species == "Rougheye/Blackspotted Rockfish Complex",
                    "Rougheye/Blackspotted", species
+  ),
+  species = ifelse(species == "North Pacific Spiny Dogfish",
+                   "Pacific Spiny Dogfish", species
   )
 )
 
@@ -249,11 +259,11 @@ dd <- dd %>% group_by(ts) %>%
 
 
 dd$weights1 <- (1 / dd$se)^2 # this would be the variance
-dd$weights <- (1 / dd$se_scaled)^2 # this would be the variance
+# dd$weights <- (1 / dd$se_scaled)^2 # this would be the variance
 # dd$weights_scaled <- (dd$weights / mean(dd$weights))
-dd$weights_scaled <- (dd$weights / sum(dd$weights))*100
+# dd$weights_scaled <- (dd$weights / sum(dd$weights))*100
 dd$weights_scaled1 <- (dd$weights1 /sum(dd$weights1))*100
-dd$weights_scaled2 <- log(dd$weights +1)
+# dd$weights_scaled2 <- log(dd$weights +1)
 # ggplot(dd) + geom_point(aes(se, (weights_scaled1), colour = sd_obs))
 # plot(weights_scaled1~weights_scaled, data = dd)
 
@@ -353,6 +363,9 @@ m <- fit_dfa(
     ),
     species = ifelse(species == "Rougheye/Blackspotted Rockfish Complex",
                      "Rougheye/Blackspotted", species
+    ),
+    species = ifelse(species == "North Pacific Spiny Dogfish",
+                     "Pacific Spiny Dogfish", species
     )
   )
 
@@ -425,12 +438,12 @@ checks <- m$monitor |>
 checks |> View()
 # xstar are random walk trends 1 year forecasting in the future so can be ignored
 
-# r <- rotate_trends(m)
-# plot_loadings(r) + scale_y_continuous(limits = c(-2,2))
+r <- rotate_trends(m)
+plot_loadings(r) + scale_y_continuous(limits = c(-2,2))
 
 # only save if converged
 if(nrow(checks)<22) {
-  if(no_covs&!density){
+  if(no_covs){
     saveRDS(m, file_name)
   }
 }
@@ -466,15 +479,18 @@ if(density) {
     # labs(colour = "", ylab = "Standardized value" ) +
     # theme(legend.position = c(0.2,0.85), axis.title.y = element_text())+
     # theme(legend.position = "none") +
-    facet_wrap(~trend_number, nrow = 2) +
+    facet_wrap(~trend_number, nrow = 1) +
     ggsidekick::theme_sleek() +
     scale_fill_manual(values = RColorBrewer::brewer.pal(n = 6, name = "Paired")[c(6,2)]) +
+   coord_cartesian(expand = FALSE) +
+   # ggtitle(paste0("DFA of biomass indices"))+
+   # ggtitle(paste0("DFA of ", set_group, " with no covariates"))+
+   # ylab("Standardized biomass index") +
     theme(legend.position='top', legend.justification='left', legend.direction='horizontal',
           plot.margin = unit(c(0.2,0.5,0.2,0.2), "cm"),
-          legend.text=element_text(size=rel(0.8))) +
-    # ggtitle(paste0("DFA of ", set_group, " with no covariates"))
-    ylab("Standardized value") +
-    ggtitle(paste0("DFA of biomass indices"))
+          legend.text=element_text(size=rel(0.8)),
+          axis.title=element_blank()
+          )
 )
 
 (p2 <- plot_loadings(rflip, names = spp,
@@ -486,13 +502,44 @@ if(density) {
     guides(alpha=guide_legend(override.aes = list(fill = "grey20")),
            fill = "none") +
     labs(alpha = "Prob not 0") +
-    theme(legend.position = "none",
+    theme(#legend.position = "none",
+
           plot.margin = unit(c(0.2,0.5,0.2,0.2), "cm"),
+          strip.text.x = element_blank(),
           axis.title.y = element_blank()) )
 
-wrap_elements(p1) + p2 + plot_layout(ncol = 2)
+# wrap_elements(p1) + p2 + plot_layout(ncol = 2)
+  # ggsave("figs/DFA-tends-total.png", width = 8, height = 5)
 
-ggsave("figs/DFA-tends-total.png", width = 8, height = 5)
+p1 + tagger::tag_facets(tag = "panel",
+                        tag_prefix = "", tag_suffix = "", #position = "tl",
+                        tag_pool = c("(a)", "(b)")) +
+p2 + tagger::tag_facets(tag = "panel",
+                           tag_prefix = "", tag_suffix = "", #position = "tl",
+                           tag_pool = c("(c)", "(d)")) +
+plot_layout(ncol = 1, heights = c(0.35, 1))&theme(tagger.panel.tag.text = element_text(color = "grey30", size = 10))
+
+ggsave("figs/man/DFA-tends-total.png", width = 8, height = 7)
+
+
+
+f <- find_dfa_trends(
+  y = dd,
+  iter = set_iter,
+  chains = set_chains,
+  inv_var_weights = "weights_scaled1",
+  estimate_trend_ar = TRUE,
+  scale = "zscore",
+  data_shape = "long",
+  seed = 298,
+  control = ctrl,
+  kmin = 1, kmax = 5,
+  compare_normal = TRUE,
+  variance = c("equal", "unequal")
+)
+
+
+
 
 } else {
 
@@ -822,6 +869,7 @@ if(just_trend_version) {
      # theme(legend.position = "none") +
      theme(legend.position='top', legend.justification='left', legend.direction='horizontal',
            plot.margin = unit(c(0,0,0,0), "cm"),
+           axis.title = element_blank(),
            legend.text=element_text(size=rel(0.8))) +
      # ggtitle(paste0("DFA of ", set_group, " with no covariates"))
      ggtitle(paste0("DFA of ", y_label, ""),
@@ -840,6 +888,7 @@ if(just_trend_version) {
     # theme(legend.position = "none") +
     theme(legend.position='top', legend.justification='left', legend.direction='horizontal',
           plot.margin = unit(c(0,0,0,0), "cm"),
+          axis.title = element_blank(),
           legend.text=element_text(size=rel(0.8))) +
     # ggtitle(paste0("DFA of ", set_group, " with no covariates"))
     ggtitle(paste0("DFA of ", y_label, ""),
@@ -919,21 +968,22 @@ if(trend_count>1){
     theme(legend.position = "none",
           axis.title.y = element_blank()) )
 
-if(trend_count>2){
-  (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 6, name = "Paired")[c(5,4,2)]))
-} else {
-  (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,3)]])+
-     scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,3)]]))
-  if(set_group == "mature females"){
-  (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set2[c(2,4)]])+
-     scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set2[c(2,4)]]))
-  }
-  if(set_group == "mature males" #& no_covs
-     ){
-    (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,4)]])+
-       scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,4)]]))
-  }
-}
+# if(trend_count>2){
+#   (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 6, name = "Paired")[c(5,4,2)]))
+# } else {
+#   (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,3)]])+
+#      scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,3)]]))
+#   if(set_group == "mature females"){
+#   (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set2[c(2,4)]])+
+#      scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set2[c(2,4)]]))
+#   }
+#   if(set_group == "mature males" #& no_covs
+#      ){
+#     (p3 <- p3 + scale_fill_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,4)]])+
+#        scale_colour_manual(values = RColorBrewer::brewer.pal(n = 10, name = "Paired")[mixed_set[c(2,4)]]))
+#   }
+# }
+#
 
 # wide version for talks
 if(trend_count>2){
@@ -1015,6 +1065,27 @@ if(trend_count>2){
 }
 }
 }
+}
+# }
+
+
+dfa_by_class(set_group)
+
+# FIGURES FOR FLOW CHART -----
+if(just_trend_version & set_group == "immatures" & !adjusted_for_density) {
+p1 + theme(plot.title = element_blank(), plot.subtitle = element_blank())
+
+ggsave(paste0("figs/man/chart-DFA-", trend_count, "trends-no-cov-",
+              gsub(" ", "-", set_group), "-", model_name, ".png"),
+       height = 1, width = 4)
+}
+
+if(set_group == "immatures" & !adjusted_for_density) {
+p2
+
+ggsave(paste0("figs/man/chart-DFA-hist-", trend_count, "trends-no-cov-",
+              gsub(" ", "-", set_group), "-", model_name, ".png"),
+       height = 1.25, width = 4.4)
 }
 
 # # # spaghetti
