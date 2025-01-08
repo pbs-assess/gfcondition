@@ -48,6 +48,7 @@ species_list <- list(
 fit_all_distribution_models <- function(species, only_sampled) {
 
   # species <- "North Pacific Spiny Dogfish"
+  set_utm_crs <- 32609
 
   ## for generating split data and some exploratory plots
   # stop_early <- TRUE
@@ -89,15 +90,15 @@ fit_all_distribution_models <- function(species, only_sampled) {
   # old figures with "shrunk" in name have a bug in the split function such that sets without sampled females got the average rather than true proportions
 
   # dens_model_name0 <- "dln-all-"
-  dens_model_name0 <- "dln-ss5-"
+  dens_model_name0 <- "dln-ss5"
 
   if(only_sampled) {
-    dens_model_name <- "dln-only-sampled-"
+    dens_model_name <- "dln-only-sampled"
     # dens_model_name0 <- "dgg-all-may-2024"
     # dens_model_name <- "dgg-only-sampled-may-2024"
   } else {
   # use SD to choose between aggregating by year or survey first, then survey, then all
-    dens_model_name <- paste0(dens_model_name0, "split-")
+    dens_model_name <- paste0(dens_model_name0, "-split")
   #   dens_model_name0 <- "dgg-all-may-2024"
   #   dens_model_name <- "dgg-all-split-may-2024"
   }
@@ -105,9 +106,11 @@ fit_all_distribution_models <- function(species, only_sampled) {
   ### add date -----
   sysdate <- unlist(strsplit(as.character(Sys.Date()), "-"))
 
-  dens_model_name0 <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
-  dens_model_name <- paste0(dens_model_name, sysdate[1], "-", sysdate[2], "")
+  # dens_model_name0 <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
+  # dens_model_name <- paste0(dens_model_name, sysdate[1], "-", sysdate[2], "")
 
+  dens_model_name0 <- paste0(dens_model_name0, "-2024-09")
+  dens_model_name <- paste0(dens_model_name, "-2024-09")
 
   # subset of surveys used for density models
   surveys_included <- c(
@@ -374,7 +377,7 @@ fit_all_distribution_models <- function(species, only_sampled) {
 
   d <- sdmTMB::add_utm_columns(ds,
          ll_names = c("longitude", "latitude"),
-         utm_crs = 32609)
+         utm_crs = set_utm_crs)
 
   dir.create(paste0("data-generated/density-data/"), showWarnings = FALSE)
   saveRDS(d, paste0("data-generated/density-data/", spp, ".rds"))
@@ -1117,10 +1120,16 @@ if(maturity_possible) {
     # )
   }
 
-  ind0 <- readRDS(i0) %>% mutate(index = "Total")
-  ind1 <- readRDS(i1) %>% mutate(index = "Mature female")
-  ind2 <- readRDS(i2) %>% mutate(index = "Mature male")
-  try(ind3 <- readRDS(i3) %>% mutate(index = "Immature"))
+  ind0 <- readRDS(i0) %>% mutate(index = "Total") %>% mutate(model_string = dens_model_name0)
+  ind1 <- readRDS(i1) %>% mutate(index = "Mature female") %>% mutate(model_string = dens_model_name)
+  ind2 <- readRDS(i2) %>% mutate(index = "Mature male") %>% mutate(model_string = dens_model_name)
+  try(ind3 <- readRDS(i3) %>% mutate(index = "Immature")%>% mutate(model_string = dens_model_name))
+
+  ## hack to correct some model_strings
+  saveRDS(ind0,i0)
+  saveRDS(ind1,i1)
+  saveRDS(ind2,i2)
+  try(saveRDS(ind3,i3))
 
   bc_inds <- bind_rows(ind0, ind1, ind2)
   try(bc_inds <- bind_rows(ind0, ind1, ind2, ind3))
@@ -1249,8 +1258,8 @@ if(maturity_possible) {
 
 
 ## Run with pmap -----
-# arg_list <- list(species = species_list, only_sampled = FALSE)
-# pmap(arg_list, fit_all_distribution_models)
+arg_list <- list(species = species_list, only_sampled = FALSE)
+pmap(arg_list, fit_all_distribution_models)
 
 arg_list2 <- list(species = species_list, only_sampled = TRUE)
 pmap(arg_list2, fit_all_distribution_models)
