@@ -3,7 +3,8 @@ library(tidyverse)
 library(sdmTMB)
 library(ggsidekick)
 devtools::load_all(".")
-theme_set(ggsidekick:::theme_sleek())
+theme_set(ggsidekick:::theme_sleek()+
+          theme(plot.margin = unit(c(0.15, 0.15, 0.15, 0.15), "inches")))
 
 fig_height <- 4 * 2
 fig_width <- 5 * 2
@@ -84,14 +85,22 @@ if(model_type == "density") {
               "/i-", spp, "-", group_tag, "-", model_string, "-20-km.rds")
 # f <- paste0(file_prefix, spp, "-", group_tag, "-", model_string, ".rds")
 } else {
-f <- paste0(file_prefix, group_tag, "-", spp, "-", model_string, ".rds")
+  if(model_type == "split-density") {
+    f <-  paste0(file_prefix, spp, "-split-", model_string, "-20-km.rds")
+  } else {
+    f <- paste0(file_prefix, group_tag, "-", spp, "-", model_string, ".rds")
+  }
 }
 
 if(file.exists(f)) {
   i <- readRDS(f)
+  if(model_type == "split-density") {
+    f <-  paste0(file_prefix, spp, "-split-", model_string, "-20-km.rds")
+  } else {
 i$species <- species
 i$group <- group_label
 i$model_string <- model_string
+}
 return(i)
 }
 return(NULL)
@@ -107,6 +116,34 @@ d <- purrr::pmap_dfr(
   .id = "model")
 
 # saveRDS(d, "data-generated/density-indices-best.rds")
+
+
+
+# split indices
+dx <- purrr::pmap_dfr(
+  index_list, #best model
+  combine_indices,
+  model_type = "split-density",
+  file_prefix = "data-generated/density-split-ind/",
+  .id = "model")|>
+  mutate(
+    species = ifelse(species == "North Pacific Spiny Dogfish",
+                     "Pacific Spiny Dogfish", species
+    ))
+
+# dx |>
+dxt <- filter(dx, group == "Total") |> #View()
+  select(species, surveys) |>
+  arrange(species) |>
+  distinct() #|> View()
+
+dxt |> filter(!(species %in% species_to_remove)) |>
+  knitr::kable(format = "latex", col.names = c("Species", "Surveys included in biomass density models"),
+               booktabs = TRUE, align = "lr", caption = "TODO", label = "model-configs") |>
+  kableExtra::column_spec(1, width = "3.5cm") |>
+  kableExtra::column_spec(2, width = "6.2cm")
+
+
 
 # get totals
 # model_string_fixed <- "dln-all-2024-09"
@@ -154,6 +191,9 @@ d2 <- purrr::pmap_dfr(
 
 d0 <- filter(d0, !(species %in% species_to_remove)) %>%
   mutate(
+    species = ifelse(species == "North Pacific Spiny Dogfish",
+                     "Pacific Spiny Dogfish", species
+    ),
     species = ifelse(species == "Rougheye/Blackspotted Rockfish Complex",
                      "Rougheye/Blackspotted", species
     ))
@@ -195,12 +235,15 @@ fig_width <- 10
 # # set_ncol <- 5
 # # set_legend_position <- c(0.7, 0.1)
 
-d |>
+g <- d |>
   filter(species %in% species_to_plot) |>
   mutate(
     # group = forcats::fct_relevel(group, "immatures", "mature males", "mature females"),
     species = ifelse(species == "Rougheye/Blackspotted Rockfish Complex",
                      "Rougheye/Blackspotted", species
+    ),
+    species = ifelse(species == "North Pacific Spiny Dogfish",
+                      "Pacific Spiny Dogfish", species
     ),
     group = factor(group, levels = c( "mature females","mature males", "immatures"),
                    labels = c("Mature females", "Mature males", "Immatures"))
@@ -214,7 +257,8 @@ d |>
   geom_ribbon(aes(alpha = group, fill = group)) +
   facet_wrap(~species, scales = "free_y", ncol = set_ncol) +
   # scale_linetype(limits = c("Total")) +
-  scale_linetype(guide = ifelse(is.na(species_to_plot2), "none", TRUE)) +
+  # scale_linetype(guide = ifelse(is.na(species_to_plot2[1]), "none", TRUE)) +
+  # guides(linetype = ifelse(is.na(species_to_plot2), "none", TRUE)) +
   scale_alpha_discrete(range = c(0.45, 0.15)) +
   scale_color_viridis_d(
     # end = 0.99,
@@ -226,8 +270,9 @@ d |>
   # scale_color_viridis_d(option = "C", direction =-1, end = 0.9) +
   # scale_fill_viridis_d(option = "C", direction =-1, end = 0.9) +
   # guides(linetype = guide_legend(order = 1),colour = guide_legend(order = 2),fill = guide_legend(order = 2),fill = guide_legend(alpha = 2)) +
-  # theme(legend.position = c(0.7, 0.04) )+
-  theme(legend.position = set_legend_position,
+  # theme(legend.position = "inside", legend.position.inside = c(0.7, 0.04) )+
+  theme(legend.position = "top",
+  # theme(legend.position = "inside", legend.position.inside = set_legend_position,
         legend.direction = "vertical", legend.box = "horizontal") +
 
   labs(
@@ -238,20 +283,22 @@ d |>
     x= ifelse(is.na(species_to_plot2), " ", "Year"),
     y="Relative biomass")
 
+if(is.na(species_to_plot2[1])){
+  g + scale_linetype(guide ="none")
+}
 
-ggsave(paste0("figs/density-indices-",
+g
+
+ggsave(paste0("figs/man/",
               set_name,
-              # "-fixed",
-              # "-not-flat-",
-              # "-flatfish-",
-              "-with-best-model-",
-              # "2024-09-filtered",
+              "density-indices-",
+              "with-best-model-",
               model_string_fixed,
               ".png"),
-       # height = fig_height*.5, width = fig_width*1.1
-       # height = fig_height*.65, width = fig_width*1.1
        height = fig_height, width = fig_width
 )
+
+
 
 hex <- scales::hue_pal()(2)
 
@@ -259,13 +306,16 @@ d1 |> bind_rows(d2) |>
   bind_rows(d0) |>
   filter(!(species %in% species_to_remove)) |>
   mutate(
+    species = ifelse(species == "North Pacific Spiny Dogfish",
+                     "Pacific Spiny Dogfish", species
+    ),
     species = ifelse(species == "Rougheye/Blackspotted Rockfish Complex",
                      "Rougheye/Blackspotted", species
     ),
     group = factor(group, levels = c( "mature females","mature males", "immatures", "total"),
                    labels = c("Mature females", "Mature males", "Immatures", "Total"))
   ) |>
-  select(-group, -model, -type) |>
+  select(-group, -model, -type, -index) |>
   distinct() |>
   group_by(model_string, year, species) |>
   summarise_all("sum") |>
@@ -300,7 +350,8 @@ d1 |> bind_rows(d2) |>
     linetype = NULL,
     x="Year", y="Relative biomass") +
   # guides(linetype = guide_legend(order = 1),colour = guide_legend(order = 2),fill = guide_legend(order = 2),fill = guide_legend(alpha = 2)) +
-  theme(legend.position = set_legend_position )
+  # theme(legend.position = "inside", legend.position.inside = set_legend_position )
+  theme(legend.position = "top")
 
 # ggsave(paste0("figs/man/all-density-indices",
 #               "-summed-comparison-2024-09",

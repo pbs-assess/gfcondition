@@ -17,15 +17,18 @@ source("analysis/00-species-list.R")
 # plot_split_density_effects
 knot_distance <- 20
 # variable <- "days_to_solstice"
-variable <- "log_depth_c"
+# variable <- "log_depth_c"
 
 # just plot the better model
 best_model <- readRDS("data-generated/all-models-compared.rds") %>%
-  filter(prop_ci_error < 0.05) %>%
+  # filter(prop_ci_error < 0.05) %>%
   group_by(species) %>% mutate(
     min_diff = min(total_diff, na.rm = TRUE)
   ) %>% filter(total_diff == min_diff) %>%
-  select(species, model_string, model_total)
+  select(species, model_string, model_total) |>
+  mutate(species2 = ifelse(species == "North Pacific Spiny Dogfish",
+                          "Pacific Spiny Dogfish", species
+  )) |> arrange(species2)
 
 best_model <- filter(best_model, !(tolower(species) %in% tolower(c(species_to_remove))))
 
@@ -36,10 +39,10 @@ m <- list()
 p <- list()
 
 
-# for (i in seq_along(best_model$species)){
-for (i in 25:35){
-  species <- best_model$species[i]
-  spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+for (i in seq_along(best_model$species2)){
+# for (i in 25:35){
+  species <- best_model$species2[i]
+  spp <- gsub(" ", "-", gsub("\\/", "-", tolower(best_model$species[i])))
 
   pd <- list()
   # labels <- list()
@@ -272,7 +275,7 @@ ggsave(paste0("figs/dens-effects-", variable, "-trans-",
 }
 
 
-# plot_split_density_effects(best_model, variable = "days_to_solstice")
+plot_split_density_effects(best_model, variable = "days_to_solstice")
 plot_split_density_effects(best_model, variable = "log_depth_c")
 
 

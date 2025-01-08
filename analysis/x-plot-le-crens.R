@@ -10,8 +10,8 @@ theme_set(ggsidekick:::theme_sleek())
 source("analysis/00-species-list.R")
 
 included_only <- TRUE
-K <- TRUE
-
+# K <- TRUE
+K <- FALSE
 ## while the maturity data is loaded, might as well produce all the Le Cren's plots together
 dat <- readRDS("data-generated/all-samples-used.rds") %>%
   filter(## remove the combined version of the sablefish survey (only version retained currently)
@@ -30,12 +30,18 @@ dat <- dat %>%
   filter(!(weight > 900 & species_common_name == tolower("Pacific Sanddab")))  %>%
   filter(!(weight > 3500 & species_common_name %in% tolower(c("Yellowmouth Rockfish",
                                                               # "Widow Rockfish",
-                                                              "Quillback Rockfish"))))
+                                                              "Quillback Rockfish"))))|>
+  mutate(species_common_name = ifelse(species_common_name == "north pacific spiny dogfish",
+                           "pacific spiny dogfish", species_common_name
+  )) |> arrange(species_common_name)
 
 mat_threshold <- 0.5
 f1 <- list.files(paste0("data-generated/condition-data-black-swan/"), pattern = ".rds", full.names = TRUE)
 
-d1 <- purrr::map_dfr(f1, readRDS)
+d1 <- purrr::map_dfr(f1, readRDS)|>
+  mutate(species_common_name = ifelse(species_common_name == "north pacific spiny dogfish",
+                                      "pacific spiny dogfish", species_common_name
+  )) |> arrange(species_common_name)
 spp <- unique(d1$species_common_name)
 
 p2 <- list()

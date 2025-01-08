@@ -1,4 +1,5 @@
 species_list <- list(
+  "Pacific Spiny Dogfish",
   "North Pacific Spiny Dogfish",
   "Pacific Ocean Perch",
   "Pacific Cod",
@@ -51,6 +52,7 @@ species_list <- list(
 
 # ## remove species?
 species_to_remove <- c(
+  "Pacific Halibut",
   # "Slender Sole",
   "Curlfin Sole",
   # "Sand Sole",

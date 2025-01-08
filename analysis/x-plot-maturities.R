@@ -44,8 +44,8 @@ if(is.null(d[[i]]$model) & is.null(d[[i]]$m)) { p[[i]] <- NULL } else {
 
   p[[i]] <- gfplot::plot_mat_ogive(m[[i]]) +
     ggtitle(paste0(toupper(
-      ifelse(m[[i]]$data$species_common_name == "rougheye/blackspotted rockfish complex",
-           "Rougheye/Blackspotted", m[[i]]$data$species_common_name)), " (",
+      ifelse(m[[i]]$data$species_common_name == "north pacific spiny dogfish",
+           "pacific spiny dogfish", m[[i]]$data$species_common_name)), " (",
                 length(unique(m[[i]]$data$specimen_id)),
                 " fish, ", length(unique(m[[i]]$data$sample_id)),
       # "/", length(unique(d[[i]]$data$sample_id)),
@@ -59,6 +59,10 @@ if(is.null(d[[i]]$model) & is.null(d[[i]]$m)) { p[[i]] <- NULL } else {
   }
 }
 }
+
+# move pacific spiny dogfish
+p[[20]] <- p[[14]]
+p[[14]] <- NULL
 
 p <- p %>% discard(is.null)
 
