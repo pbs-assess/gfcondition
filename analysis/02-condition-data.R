@@ -8,15 +8,20 @@ library(gfplot)
 # load overall species list
 source("analysis/00-species-list.R")
 
-species_list <- list(
-# "Sablefish"
-# "North Pacific Spiny Dogfish"
-"Pacific Halibut"
-)
+# species_list <- list(
+# # "Sablefish"
+# # "North Pacific Spiny Dogfish"
+# # "Pacific Halibut"
+#   "Pacific Cod"
+#   # "Spotted Ratfish"
+# )
 # species_list <- list(species = species_list[27:length(species_list)])
 species_list <- list(species = species_list)
 
 get_condition_data <- function(species){
+
+# set_weight_scale <- 1/1000 # in kg # initially done in kg but g more conventional
+set_weight_scale <- 1 # in g # so better to report in g?
 
 update_m <- FALSE
 # update_m <- TRUE
@@ -36,12 +41,12 @@ filter(!is.na(longitude), !is.na(latitude),
        )
 
 # if(species != "Sablefish"){
-  ## remove the combined version of the sablefish survey (only version retained currently)
+  ## remove the sablefish survey
   ## because this survey is at different time of year than all the others
   dat <- filter(dat, !(survey_abbrev %in% c("SABLE")))
 # }
-  # # temporary fix for IPHC because of sample size imbalance over time and
-  # # uncertainty about how weight was measured
+  # # remove IPHC because of sample size imbalance over time
+  # # and uncertainty about how weight was measured
   # if(species == "Pacific Halibut"){
   #   dat <- filter(dat, survey_abbrev != "IPHC FISS")
   # }
@@ -336,14 +341,6 @@ if(update_m&is.null(custom_length_threshold)) {
 
 # 2. Le Cren’s relative condition factor ----
 
-fish_groups <- filter(fish_groups, length > 0| is.na(length))
-fish_groups <- filter(fish_groups, weight > 0| is.na(weight))
-
-mf <- gfplot::fit_length_weight(fish_groups, sex = "female", usability_codes = NULL)
-mm <- gfplot::fit_length_weight(fish_groups, sex = "male", usability_codes = NULL)
-
-## Length-weight plot ----
-gfplot::plot_length_weight(object_female = mf, object_male = mm)
 
 ## Remove black swan outliers ----
 
@@ -354,20 +351,44 @@ is_heavy_tail <- TRUE
 # is_heavy_tail <- FALSE
 
 filter_lw_outliers <- function(model,
-                                  numsd = sd_threshold,
-                                  heavy_tailed = is_heavy_tail
-                                  ){
+                               numsd = sd_threshold,
+                               heavy_tailed = is_heavy_tail
+){
   if(heavy_tailed){
-  l <- qt(0.025, 3) * exp(model$pars$log_sigma)*numsd
-  u <- qt(0.975, 3) * exp(model$pars$log_sigma)*numsd
+    l <- qt(0.025, 3) * exp(model$pars$log_sigma)*numsd
+    u <- qt(0.975, 3) * exp(model$pars$log_sigma)*numsd
   }else{
-  l <- qnorm(0.025, 0, sd = exp(model$pars$log_sigma)*numsd)
-  u <- qnorm(0.975, 0, sd = exp(model$pars$log_sigma)*numsd)
+    l <- qnorm(0.025, 0, sd = exp(model$pars$log_sigma)*numsd)
+    u <- qnorm(0.975, 0, sd = exp(model$pars$log_sigma)*numsd)
   }
   model$data$resids <- log(model$data$weight) - (model$pars$log_a + model$pars$b * log(model$data$length))
   out <- model$data |> filter(!(resids > u) & !(resids < l))
   out
 }
+
+
+fish_groups <- filter(fish_groups, length > 0| is.na(length))
+fish_groups <- filter(fish_groups, weight > 0| is.na(weight))
+
+if(species == "Pacific Halibut"){
+
+  fish_groups_iphc <- filter(fish_groups, survey_abbrev == "IPHC FISS")
+
+  mf1 <- gfplot::fit_length_weight(fish_groups_iphc, sex = "female", usability_codes = NULL)
+  mm1 <- gfplot::fit_length_weight(fish_groups_iphc, sex = "male", usability_codes = NULL)
+
+  df1 <- filter_lw_outliers(mf1)
+  dm1 <- filter_lw_outliers(mm1)
+
+  df1$wbar <- exp(mf1$pars$log_a) * df1$length^mf1$pars$b
+  dm1$wbar <- exp(mm1$pars$log_a) * dm1$length^mm1$pars$b
+
+  fish_groups <- filter(fish_groups, survey_abbrev != "IPHC FISS")
+
+}
+
+mf <- gfplot::fit_length_weight(fish_groups, sex = "female", usability_codes = NULL, scale_weight = set_weight_scale)
+mm <- gfplot::fit_length_weight(fish_groups, sex = "male", usability_codes = NULL, scale_weight = set_weight_scale)
 
 df <- filter_lw_outliers(mf)
 dm <- filter_lw_outliers(mm)
@@ -375,15 +396,26 @@ dm <- filter_lw_outliers(mm)
 df$wbar <- exp(mf$pars$log_a) * df$length^mf$pars$b
 dm$wbar <- exp(mm$pars$log_a) * dm$length^mm$pars$b
 
+## Length-weight plot ----
+gfplot::plot_length_weight(object_female = mf, object_male = mm)
+
 # include unknown sex individuals for now, because immature individuals can be difficult to sex and differences in growth rate may be slim
 du <- dplyr::filter(fish_groups, sex %in% c(0, 3), !is.na(weight), !is.na(length))
 # Apply an intermediate slope and intercept to these individuals
 # weight is in grams, so convert to kg
 du$weight <- du$weight/1000
 
+## weight is in grams, so convert to kg
+du$weight <- du$weight*set_weight_scale
+
 du$wbar <- exp((mm$pars$log_a + mf$pars$log_a) / 2) * du$length^((mm$pars$b + mf$pars$b) / 2)
 
-dd <- bind_rows(df, dm)
+if(species == "Pacific Halibut"){
+  dd <- bind_rows(df, dm, df1, dm1)
+} else {
+  dd <- bind_rows(df, dm)
+}
+
 dd$cond_fac <- dd$weight / dd$wbar
 
 # hist(dd$weight)
@@ -391,15 +423,20 @@ dd$cond_fac <- dd$weight / dd$wbar
 
 du$cond_fac <- du$weight / du$wbar
 
+# don't include unknown sex individuals that exceed the cond_fac of known ones
 dd2 <- filter(du, cond_fac >= min(dd$cond_fac) & cond_fac <= max(dd$cond_fac)) |> bind_rows(dd)
 
 # plot(cond_fac~length, data = dd2)
-
+# ggplot(dd2, aes(cond_fac, length, colour = survey_type)) + geom_point()
+# ggplot(dd2, aes(length, weight, colour = cond_fac)) + geom_point() + facet_wrap(~survey_type, scales = "free")
+ggplot(dd2, aes(cond_fac, fill = survey_type)) + geom_histogram() #+ facet_wrap(~survey_type)
 
 # 4. Calculate ‘weights' (sample multiplier for each fish sampled) ----
 ds <- dd2 %>%
   group_by(fishing_event_id, group_name) %>%
   mutate(
+    weight = weight/set_weight_scale, # undo changes above, if any?
+    weight = weight/1000, # put in kg for subsequent coding purposes
     log_depth = log(depth_m),
     group_sampled_weight = sum(weight, na.rm = T),
     group_num_sampled = n()
@@ -434,6 +471,12 @@ ds <- dd2 %>%
   ) %>%
   unique()
 
+ds$lw_f_log_a <- mf$pars$log_a
+ds$lw_f_b <- mf$pars$b
+
+ds$lw_m_log_a <- mm$pars$log_a
+ds$lw_m_b <- mm$pars$b
+
 # remove some rockfish outliers
 dat <- dat %>%
   filter(!(weight > 900 & species_common_name == tolower("Pacific Sanddab")))  %>%
@@ -445,7 +488,6 @@ ds <- ds %>%
   filter(!(weight > 3.500 & species_common_name %in% tolower(c("Yellowmouth Rockfish",
                                                               # "Widow Rockfish",
                                                               "Quillback Rockfish"))))
-
 
 # # investigate results
 # ds %>%
@@ -477,28 +519,34 @@ ds <- ds %>%
 # abline(v = m$mat_perc$mean$m.mean.p0.5, col = "blue"
 
 # 5. Outliers plotted ----
-
+# browser()
 ggplot(dat |> mutate(weight = weight/1000) |> filter(
   sex %in% c(1,2)
-  ), aes(length, weight)) +
+  ), aes(length, weight, shape = survey_type)) +
   geom_point(aes(colour = year)) +
   geom_point(data = ds, colour = "white") +
   geom_point(data = ds, colour = "black", alpha = 0.4) +
-  ## checking if specific unit corrections were made
+  # ## checking if specific unit corrections were made
   # geom_point(data = filter(dat,
-  #     sample_id %in% c(554878, 406981, 537306, 443178,
-  #                      # 150218, # rest of arrowtooth sample
-  #                      514880, 536500, 536506, 537170, 532297)|
-  #     specimen_id %in% c(
-  #       # 5113159, #arrowtooth error
-  #       # 12684889,
-  #       # 7629026,
-  #       16224012, 11018029, 11018030)),
-  #     aes(length, weight/1000),
+  #     # sample_id %in% c(554878, 406981, 537306, 443178,
+  #     #                  # 150218, # rest of arrowtooth sample
+  #     #                  514880, 536500, 536506, 537170, 532297)|
+  #     # specimen_id %in% c(
+  #     #   # 5113159, #arrowtooth error
+  #     #   # 12684889,
+  #     #   # 7629026,
+  #     #   16224012, 11018029, 11018030)),
+  #     ## ratfish issue, maybe full tail length?
+  #     fishing_event_id %in% c(5099781,
+  #                             4546343,
+  #                             4546435
+  #                             )),
+  #     aes(length, weight/100),
   #     colour = "green") +
   geom_vline(xintercept = f_fish$threshold, col = "#fde725") +
   geom_vline(xintercept = m_fish$threshold, col = "#21908CFF") +
   labs(
+    shape = "Survey",
     colour = "Year",
     x = "Length (cm)", y = "Weight (kg)") +
   scale_y_log10() +
@@ -509,8 +557,8 @@ ggplot(dat |> mutate(weight = weight/1000) |> filter(
                  ifelse(is_heavy_tail, " heavy tailed", " normal")
                  #, " (trimmed at ", lower_quantile, " and ", upper_quantile, " quantiles)"
                  )) +
-  ggsidekick::theme_sleek() + theme(legend.position = "inside", legend.position.inside = c(0.2,0.8))
-# browser()
+  ggsidekick::theme_sleek() + theme(legend.position = "inside", legend.position.inside = c(0.2,0.7))
+
 ggsave(paste0("figs/cond-black-swan-",
               ifelse(is_heavy_tail, "t", "norm"),
               "-", sd_threshold, "sd-",
