@@ -18,9 +18,9 @@ dir.create(paste0("figs/DFA/"), showWarnings = FALSE)
 dir.create(paste0("figs/man/"), showWarnings = FALSE)
 dir.create(paste0("data-generated/DFA/"), showWarnings = FALSE)
 
-set_group <- "immatures"
+# set_group <- "immatures"
 # set_group <- "mature males"
-# set_group <- "mature females"
+set_group <- "mature females"
 
 # dfa_by_class <- function(set_group){ ### not sure why but this didn't work
 ## Choose model ----
@@ -420,20 +420,20 @@ m <- fit_dfa(
 # is_converged(mi, threshold = 1.1)
 is_converged(m, threshold = 1.1)
 
-# library(bayesplot)
-# bayesplot::mcmc_trace(m$samples, regex_pars = c("sigma","lp"))
-# bayesplot::mcmc_trace(m$samples, regex_pars = c("Z"))
-# # bayesplot::mcmc_trace(m$samples, regex_pars = c("Z"), size = 0.5,
-# #                       # facet_args = list(nrow = 2),
-# #                       np = nuts_params(m$model),
-# #                       np_style = trace_style_np(div_color = "black", div_size = 0.5))
-#
+library(bayesplot)
+bayesplot::mcmc_trace(m$samples, regex_pars = c("sigma","lp"))
+bayesplot::mcmc_trace(m$samples, regex_pars = c("Z"))
+# bayesplot::mcmc_trace(m$samples, regex_pars = c("Z"), size = 0.5,
+#                       # facet_args = list(nrow = 2),
+#                       np = nuts_params(m$model),
+#                       np_style = trace_style_np(div_color = "black", div_size = 0.5))
+
 # range(m$monitor$Bulk_ESS)
-# range(m$monitor$Rhat)
+range(m$monitor$Rhat)
 # row.names(m$monitor)
 
 checks <- m$monitor |>
-  filter(Rhat >1.1|Bulk_ESS<300|Tail_ESS<300) |>
+  filter(Rhat >1.01|Bulk_ESS<300|Tail_ESS<300) |>
   as_tibble(rownames = "var")
 checks |> View()
 # xstar are random walk trends 1 year forecasting in the future so can be ignored
