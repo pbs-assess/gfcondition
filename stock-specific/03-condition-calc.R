@@ -16,6 +16,14 @@ spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 dset <- readRDS(paste0("stock-specific/", spp, "/data/tidy-survey-sets-", spp, ".rds"))
 dat <- readRDS(paste0("stock-specific/", spp, "/data/tidy-survey-samples-", spp, ".rds"))
 
+add_commercial <- FALSE
+
+if(add_commercial) {
+cdat <- readRDS(paste0("stock-specific/", spp, "/data/comm-dover-samples.rds")) |>
+  filter(month %in% c(5,6,7,8,9) & trip_year >= 2000)
+dat <- bind_rows(dat,cdat)
+}
+
 # 1. Filter surveys included ----
 
 # TODO: decide which surveys to include, for now including all data available
@@ -311,8 +319,11 @@ if(update_m & is.null(custom_length_threshold)) {
 fish_groups <- filter(fish_groups, length > 0| is.na(length))
 fish_groups <- filter(fish_groups, weight > 0| is.na(weight))
 
-mf <- gfplot::fit_length_weight(fish_groups, sex = "female", usability_codes = NULL)
-mm <- gfplot::fit_length_weight(fish_groups, sex = "male", usability_codes = NULL)
+mf <- gfplot::fit_length_weight(fish_groups, sex = "female", usability_codes = NULL, scale_weight = set_weight_scale)
+mm <- gfplot::fit_length_weight(fish_groups, sex = "male", usability_codes = NULL, scale_weight = set_weight_scale)
+
+saveRDS(mf, paste0("stock-specific/", spp, "/output/", "lw-females-", spp, ".rds"))
+saveRDS(mm, paste0("stock-specific/", spp, "/output/", "lw-males-", spp, ".rds"))
 
 ## Length-weight plot ----
 gfplot::plot_length_weight(object_female = mf, object_male = mm)
@@ -350,8 +361,10 @@ dm$wbar <- exp(mm$pars$log_a) * dm$length^mm$pars$b
 # include unknown sex individuals for now, because immature individuals can be difficult to sex and differences in growth rate may be slim
 du <- dplyr::filter(fish_groups, sex %in% c(0, 3), !is.na(weight), !is.na(length))
 # Apply an intermediate slope and intercept to these individuals
-# weight is in grams, so convert to kg
-du$weight <- du$weight/1000
+
+
+## weight is in grams, so convert to kg
+du$weight <- du$weight*set_weight_scale
 
 du$wbar <- exp((mm$pars$log_a + mf$pars$log_a) / 2) * du$length^((mm$pars$b + mf$pars$b) / 2)
 
@@ -374,6 +387,8 @@ dd2 <- filter(du, cond_fac >= min(dd$cond_fac) & cond_fac <= max(dd$cond_fac)) |
 ds <- dd2 %>%
   group_by(fishing_event_id, group_name) %>%
   mutate(
+    weight = weight/set_weight_scale, # undo changes above, if any?
+    weight = weight/1000, # put in kg for subsequent coding purposes
     log_depth = log(depth_m), # TODO: should be in data prep?
     group_sampled_weight = sum(weight, na.rm = T),
     group_num_sampled = n()
@@ -409,11 +424,16 @@ ds <- dd2 %>%
   unique()
 #
 
-
 # ds <- readRDS(paste0("stock-specific/", spp, "/output/condition-data-", spp, "-mat-", mat_threshold, ".rds"))
 
-saveRDS(ds, paste0("stock-specific/", spp, "/output/condition-data-", spp, "-mat-", mat_threshold, ".rds"))
 
+ds$lw_f_log_a <- mf$pars$log_a
+ds$lw_f_b <- mf$pars$b
+
+ds$lw_m_log_a <- mm$pars$log_a
+ds$lw_m_b <- mm$pars$b
+
+saveRDS(ds, paste0("stock-specific/", spp, "/output/condition-data-", spp, "-mat-", mat_threshold, ".rds"))
 
 # # investigate results
 # ds %>%
