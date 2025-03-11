@@ -80,9 +80,15 @@ ggsave(paste0("stock-specific/", spp, "/figs/flow-chart/01-total-dens-4yrs.png")
        height = 1.5, width = 4
 )
 
+# ggsave(paste0("stock-specific/", spp, "/figs/total-dens-4yrs.png"),
+#        height = 2.5, width = 8
+# )
+
+
+
 # 2. Maturity ----
 mat <- readRDS(paste0("stock-specific/", spp, "/output/split-catch-data-", spp, ".rds"))
-mat$maturity_plot$layers[[4]] <- NULL
+# mat$maturity_plot$layers[[4]] <- NULL
 
 mat$maturity_plot + theme(
   legend.position = "inside", legend.position.inside = c(0.8, 0.5),
@@ -124,7 +130,12 @@ ggplot(
              alpha = 0.8
   ) +
   facet_wrap(~sex_label) +
-  geom_vline(aes(xintercept = vline, linetype = sex_label, alpha = sex_label), show.legend = F) +
+  geom_vline(aes(xintercept = vline,
+                 #linetype = sex_label,
+                 # alpha = sex_label
+                 ),
+             linetype = "dashed",
+             show.legend = F) +
   scale_alpha_discrete(range = c(1,0.5)) +
   labs(
     colour = "Le Cren's", shape = "Sex",
@@ -141,7 +152,7 @@ ggplot(
 
 
 ggsave(paste0("stock-specific/", spp, "/figs/flow-chart/03-le-crens.png"),
-       height = 2.25, width = 3.5
+       height = 3.5, width = 5.5
 )
 
 
@@ -191,6 +202,15 @@ i1 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_na
 i2 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_name1, "/mat-m/i-", m2, ".rds")
 i3 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_name1, "/imm/i-", m3, ".rds")
 
+m1 <- paste0(spp, "-mat-fem-", dens_model_name2, "-", knot_distance, "-km")
+m2 <- paste0(spp, "-mat-m-", dens_model_name2, "-", knot_distance, "-km")
+m3 <- paste0(spp, "-imm-", dens_model_name2, "-", knot_distance, "-km")
+
+i0 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_total, "/total/i-", m, ".rds")
+i1 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_name2, "/mat-fem/i-", m1, ".rds")
+i2 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_name2, "/mat-m/i-", m2, ".rds")
+i3 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_name2, "/imm/i-", m3, ".rds")
+
 
 d0 <- readRDS(i0)
 d <- readRDS(i1) |> bind_rows(readRDS(i2)) |> bind_rows(readRDS(i3))
@@ -239,6 +259,66 @@ ds$group <- "Sum of split indices"
 ggsave(paste0("stock-specific/", spp, "/figs/flow-chart/05-density-indices.png"),
        height = 1.7, width = 3.6
 )
+
+
+m1 <- paste0(spp, "-mat-fem-", dens_model_name2, "-", knot_distance, "-km")
+m2 <- paste0(spp, "-mat-m-", dens_model_name2, "-", knot_distance, "-km")
+m3 <- paste0(spp, "-imm-", dens_model_name2, "-", knot_distance, "-km")
+
+i0 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_total, "/total/i-", m, ".rds")
+i1 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_name2, "/mat-fem/i-", m1, ".rds")
+i2 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_name2, "/mat-m/i-", m2, ".rds")
+i3 <- paste0("stock-specific/", spp, "/output/", "density-index/", dens_model_name2, "/imm/i-", m3, ".rds")
+
+
+d0 <- readRDS(i0)
+d <- readRDS(i1) |> bind_rows(readRDS(i2)) |> bind_rows(readRDS(i3))
+
+ds <- d |>
+  select(-group, -type) |>
+  group_by(model_string, year, species) |>
+  summarise_all("sum")
+
+ds$group <- "Sum of split indices"
+
+(g <- d |> ggplot(aes(year, est/1000*4,
+                      ymin = lwr/1000*4,
+                      ymax = upr/1000*4)) +#convert to tons, multiply by grid cell area
+    geom_ribbon(data = d0, alpha = 0.08) +
+    geom_line(aes(colour = group, linetype = "Split by sex and maturity")) +
+    geom_ribbon(aes(alpha = group, fill = group)) +
+    geom_line(data = ds, colour = "black", aes(linetype = "Sum of split indices")) +
+    geom_line(data = d0, colour = "black", aes(linetype = "Index of total biomass")) +
+    scale_alpha_discrete(range = c(0.45, 0.25)) +
+    scale_color_viridis_d(
+      # end = 0.99,
+      direction =-1,
+      option = "D") +
+    scale_linetype_manual(
+      values=c(1,2,3)
+    ) +
+    scale_fill_viridis_d(# end = 0.99,
+      direction =-1,
+      option = "D") +
+    coord_cartesian(expand = FALSE) +
+    theme(
+      axis.title.x = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      legend.position = "inside", legend.position.inside = c(0.5, 0.8),
+      legend.direction = "vertical", legend.box = "horizontal")+
+    labs(
+      fill = NULL,
+      alpha = NULL,
+      colour = NULL,
+      linetype = NULL,
+      x="Year", y="Relative biomass"))
+
+
+ggsave(paste0("stock-specific/", spp, "/figs/flow-chart/05-density-indices-only-sampled.png"),
+       height = 2.7, width = 4.6
+)
+
 
 # 6. Condition maps----
 cond_model_names <- list.files(paste0("stock-specific/", spp, "/output/cond-pred"),
