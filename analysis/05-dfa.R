@@ -32,9 +32,9 @@ set_group <- "mature females"
 # set_chains <- 1 # 1 works
 
 
-# ctrl <- list(adapt_delta = 0.95, max_treedepth = 12) # this works for imm not accounting for density
+ctrl <- list(adapt_delta = 0.95, max_treedepth = 12) # this works for imm not accounting for density
 # ctrl <- list(adapt_delta = 0.99, max_treedepth = 20) # default settings
-ctrl <- list(adapt_delta = 0.95, max_treedepth = 20)
+# ctrl <- list(adapt_delta = 0.95, max_treedepth = 20)
 set_iter <- 10000 # min 2000
 set_chains <- 5 # 1 works
 estimate_sigma <- FALSE
@@ -88,7 +88,7 @@ if(no_covs) {
   if(set_group ==  "mature females") {
     y_label <- "Mature female condition indices (adjusting for density)"
     which_flip <- 0L
-    which_flip2 <- 2L
+    which_flip2 <- 0L
   }
   } else {
   # # model_name <- "apr-2024"
@@ -103,7 +103,7 @@ if(no_covs) {
   if(set_group == "mature males") {
     y_label <- "Mature male condition indices (not controlling for density)"
     which_flip <- 0L
-    which_flip2 <- 0L
+    which_flip2 <- 2L
   }
   if(set_group ==  "mature females") {
     y_label <- "Mature female condition indices (not controlling for density)"
@@ -420,13 +420,6 @@ m <- fit_dfa(
 # is_converged(mi, threshold = 1.1)
 is_converged(m, threshold = 1.1)
 
-library(bayesplot)
-bayesplot::mcmc_trace(m$samples, regex_pars = c("sigma","lp"))
-bayesplot::mcmc_trace(m$samples, regex_pars = c("Z"))
-# bayesplot::mcmc_trace(m$samples, regex_pars = c("Z"), size = 0.5,
-#                       # facet_args = list(nrow = 2),
-#                       np = nuts_params(m$model),
-#                       np_style = trace_style_np(div_color = "black", div_size = 0.5))
 
 # range(m$monitor$Bulk_ESS)
 range(m$monitor$Rhat)
@@ -438,18 +431,65 @@ checks <- m$monitor |>
 checks |> View()
 # xstar are random walk trends 1 year forecasting in the future so can be ignored
 
-r <- rotate_trends(m)
-plot_loadings(r) + scale_y_continuous(limits = c(-2,2))
+
+# library(bayesplot)
+# bayesplot::mcmc_trace(m$samples, regex_pars = c("sigma","lp"))
+# bayesplot::mcmc_trace(m$samples, regex_pars = c("Z"))
+
+
+# bayesplot::mcmc_trace(m$samples, regex_pars = c("Z"), size = 0.5,
+#                       # facet_args = list(nrow = 2),
+#                       np = nuts_params(m$model),
+#                       np_style = trace_style_np(div_color = "black", div_size = 0.5))
+
+#
+#
+# get_varimax <- function(fitted_model, conf_level = 0.95, invert = FALSE) {
+#
+#   # get the inverse of the rotation matrix
+#   n_mcmc <- dim(fitted_model$samples)[2] * dim(fitted_model$samples)[1]
+#
+#   flip <- ifelse(invert == FALSE, 1, -1)
+#
+#   temp <- reshape_samples(fitted_model$samples)
+#   Z <- temp$Z
+#   # x <- temp$x
+#   # n_ts <- dim(Z)[2]
+#   # n_trends <- dim(x)[2]
+#   # n_years <- dim(x)[3]
+#   #
+#   # # do rotation for each MCMC draw (slow)
+#   # mcmc_trends_rot <- array(0, dim = c(n_mcmc, n_trends, n_years))
+#   # mcmc_Z_rot <- array(0, dim = c(n_mcmc, n_ts, n_trends))
+#   #
+#   H.inv <- list()
+#
+#   if (n_trends > 1) {
+#     for (i in seq_len(n_mcmc)) {
+#       Zest <- Z[i, , ]
+#       H.inv <- varimax(Zest)
+#     }
+#   }
+#
+#   }
+#
+#
+#
+# stats::varimax(m$model)
+
+
+# r <- rotate_trends(m)
+# plot_loadings(r) + scale_y_continuous(limits = c(-2,2))
 
 # only save if converged
-if(nrow(checks)<22) {
+if(nrow(checks)<3) {
   if(no_covs){
     saveRDS(m, file_name)
   }
 }
 
 # Posthoc covariate tests -----
-if(nrow(checks)<22) {
+if(nrow(checks)<3) {
 r <- rotate_trends(m)
 
 # plot_trends(r) + scale_x_continuous(label = label_yrs )
@@ -670,7 +710,7 @@ cor1 <- as.data.frame(correlation)
    pro_covar1b <- pp1
      # pro_covar1b <- sst0
      # pro_covar1b <- o20
-     # pro_covar1b <- so20   #*
+     # pro_covar1b <- npgo0   #*
    # pro_covar1b <- pdo0   #*
    # pro_covar1b <- npi0   #~
    # pro_covar1b <- oni0
@@ -695,12 +735,12 @@ if(trend_count>1){
   # pro_covar2 <- sst0   # females
   # pro_covar2 <- tob0   #~
   # pro_covar2 <- o20
-  pro_covar2 <- npgo0
+  pro_covar2 <- npgoF
   # pro_covar2 <- so20
 
   if(set_group == "mature females"){
       # pro_covar2 <- pt0
-      pro_covar2 <- pdo0   #~ males and imm
+      pro_covar2 <- npgoF   #~ males and imm
       # # pro_covar2 <- pp0   #~ males and imm
       # pro_covar2 <- sst0   # females
       # # pro_covar2 <- tob0   #~
@@ -727,7 +767,7 @@ if(trend_count>1){
     # pro_covar2b <- pdo1
       # pro_covar2b <- pp0
         # pro_covar2b <- o2p0
-        pro_covar2b <- npgo0
+        pro_covar2b <- pdoF
       # pro_covar2b <- sst1
       # pro_covar2b <- tob1   # males
       # pro_covar2b <- so20   # females
@@ -857,7 +897,7 @@ if(trend_count>2){
 
 # colour sets
 mixed_set <- c(10,6,4,1)
-mixed_set2 <- c(3,6,1,10) # used for females mostly
+mixed_set2 <- c(3,6,10,1) # used for females mostly
 # mixed_set2 <- c(9,6,4,10)
 
 if(just_trend_version) {
@@ -867,7 +907,7 @@ if(just_trend_version) {
      labs(colour = "", ylab = "Standardized value" ) +
      # theme(legend.position = c(0.2,0.85), axis.title.y = element_text())+
      # theme(legend.position = "none") +
-     theme(legend.position='top', legend.justification='left', legend.direction='horizontal',
+     theme(legend.position='top', legend.justification='right', legend.direction='horizontal',
            plot.margin = unit(c(0,0,0,0), "cm"),
            axis.title = element_blank(),
            legend.text=element_text(size=rel(0.8))) +
@@ -886,7 +926,9 @@ if(just_trend_version) {
     labs(colour = "", ylab = "Standardized value" ) +
     # theme(legend.position = c(0.2,0.85), axis.title.y = element_text())+
     # theme(legend.position = "none") +
-    theme(legend.position='top', legend.justification='left', legend.direction='horizontal',
+    theme(legend.position='top', legend.direction='horizontal',
+          # legend.justification=c(0.65),
+          legend.justification='left',
           plot.margin = unit(c(0,0,0,0), "cm"),
           axis.title = element_blank(),
           legend.text=element_text(size=rel(0.8))) +
@@ -927,6 +969,9 @@ if(trend_count>1){
   xlab("Post-hoc correlation coefficients") + ylab("Count") +
   facet_wrap(~Label#, scales = "free"
              ) +
+  # scale_x_continuous(expand = c(0,0)) +
+  # scale_y_continuous(expand = c(0,1000)) +
+  coord_cartesian(xlim = c(-1.05,1.05), ylim = c(0,NA), expand = FALSE) +
   theme(
     plot.margin = unit(c(0.2,0,0,0), "cm"),
     axis.title.y = element_blank(),
@@ -1011,7 +1056,7 @@ if(trend_count>2){
               gsub(" ", "-", set_group), "-", model_name, "-",
               gsub(" ", "-", pro_covar1$Variable[1]), "-",
               gsub(" ", "-", pro_covar2$Variable[1]), "-", bayesdfa_config, ".png"),
-       height = fig_height/1.55, width = fig_width*1)
+       height = fig_height/1.55, width = fig_width*1.1)
 
  } else {
 ggsave(paste0("figs/DFA-", trend_count, "trends-no-cov-",

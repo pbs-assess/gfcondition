@@ -1,6 +1,7 @@
 # prepare coastwide covariates for DFA
 
 library(tidyverse)
+library(patchwork)
 library(pacea)
 devtools::load_all()
 theme_set(ggsidekick::theme_sleek())
@@ -8,16 +9,30 @@ theme_set(ggsidekick::theme_sleek())
 # check that this matches current range for condition indices?
 yrs <- 2002:2024
 
+npgo2 <- npgo |>
+  # filter(month %in% c(1,2,3,4,5,6)) |> # not sure why 7 was included before?
+  group_by(year) |> summarise(value = mean(anomaly, na.rm = TRUE)) |>
+  mutate(year = year + 2) |>
+  filter(year %in% yrs, !is.na(value)) |>
+  mutate(time = seq_along(year),
+         value_raw = value,
+         value = (value - mean(value))/ sd(value),
+         # value = value_raw,
+         type = "NPGO (lag 2)")
+hist(npgo2$value)
+
 npgo0 <- npgo |>
-  filter(month %in% c(1,2,3,4,5,6)) |> # not sure why 7 was included before?
+  # filter(month %in% c(1,2,3,4,5,6)) |> # not sure why 7 was included before?
   group_by(year) |> summarise(value = mean(anomaly, na.rm = TRUE)) |>
   filter(year %in% yrs, !is.na(value)) |>
   mutate(time = seq_along(year),
          value_raw = value,
          value = (value - mean(value))/ sd(value),
+         # value = value_raw,
          type = "NPGO")
 hist(npgo0$value)
 
+npgoF <- npgo2 |> mutate(value =-value, type = "Inverted NPGO (lag 2)")
 
   # load("data-raw/npi_monthly.rda")
   npi0 <- npi_monthly |>
@@ -48,7 +63,7 @@ hist(npgo0$value)
     mutate(time = seq_along(year),
            value_raw = value,
            value = (value - mean(value))/ sd(value),
-           type = "SOI (prior year)")
+           type = "SOI (lag 1)")
   hist(soi1$value)
 
 
@@ -77,7 +92,7 @@ hist(npgo0$value)
     mutate(time = seq_along(year),
            value_raw = value,
            value = (value - mean(value))/ sd(value),
-           type = "ONI (prior year)")
+           type = "ONI (lag 1)")
   hist(oni1$value)
 
   # if(var_type == "ONI" & set_lag == 1){
@@ -99,6 +114,8 @@ hist(npgo0$value)
            type = "PDO")
   hist(pdo0$value)
 
+  pdoF <- pdo0 |> mutate(value =-value, type = "Inverted PDO")
+
   pdo1 <- pdo |> group_by(year) |>
     summarise(value = mean(anomaly, na.rm = TRUE)) |>
     mutate(year = year + 1) |>
@@ -106,7 +123,7 @@ hist(npgo0$value)
     mutate(time = seq_along(year),
            value_raw = value,
            value = (value - mean(value))/ sd(value),
-           type = "PDO (prior year)")
+           type = "PDO (lag 1)")
   hist(pdo1$value)
 
   # if(var_type == "PDO" & set_lag == 1){
@@ -144,7 +161,7 @@ hist(npgo0$value)
       time = seq_along(year),
       value_raw = value,
       value = (value - mean(value))/ sd(value),
-      type = "Production (prior year)")
+      type = "Production (lag 1)")
   hist(pp1$value)
 
 
@@ -214,7 +231,7 @@ hist(npgo0$value)
       time = seq_along(year),
       value_raw = value,
       value = (value - mean(value))/ sd(value),
-      type = "SST (prior year)")
+      type = "SST (lag 1)")
   hist(sst1$value)
 
   ## TOB - not correlated
@@ -236,7 +253,7 @@ hist(npgo0$value)
       time = seq_along(year),
       value_raw = value,
       value = (value - mean(value))/ sd(value),
-      type = "TOB (prior year)")
+      type = "TOB (lag 1)")
   hist(tob1$value)
 
   ## BO2 - negatively correlated with 2
@@ -303,7 +320,7 @@ hist(npgo0$value)
 
   ev1 <- bind_rows(pdo0, oni0, npgo0#, npi0
                    ) |>
-    mutate(type = factor(type, levels = c("ENSO (ONI)", "PDO", "NPGO", "NPI"))) %>%
+    mutate(type = factor(type, levels = c("ENSO (ONI)", "PDO", "NPGO (lag 2)", "NPI"))) %>%
     ggplot() +
     geom_line(aes(time, value, colour = type), alpha = 0.7, linewidth = 1) +
     # geom_point(aes(time, value, colour = type), size = 2) +
@@ -315,6 +332,8 @@ hist(npgo0$value)
     scale_x_continuous(limits = c(0, 24),label = label_yrs ) +
     theme(
       axis.title = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
       legend.justification=c(0, 1)) +
     # legend.position = "none")+
     labs(x = "Year", y = "Standardized index", colour = "Climate Index")
@@ -339,13 +358,18 @@ hist(npgo0$value)
       7)])  +
     scale_x_continuous(limits = c(0, 24), label = label_yrs ) +
     theme(
-      axis.title.y = element_blank(),
+      axis.title = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
       legend.justification=c(0, 1)) +
     # legend.position = "none")+
     labs(x = "Year", y = "Standardized value", colour = "Temperature")
   ev2
 
-  ev3 <- bind_rows(pp0,  #pt0,
+  ev3 <- bind_rows(
+    # npgoF,
+    pp0,  #pt0,
+    pp1,
                    # so20,
                    o20#, pink1, pink2
   ) |>
@@ -355,13 +379,15 @@ hist(npgo0$value)
     # geom_point(aes(time, value, colour = type), size = 2) +
     # scale_color_viridis_d()+
     # scale_color_brewer(palette = "Paired")+
-    scale_colour_manual(values = RColorBrewer::brewer.pal(n = 12, name = "Paired")[c(1,#3,
-                                                                                     4#,2
+    scale_colour_manual(values = RColorBrewer::brewer.pal(n = 12, name = "Paired")[c(#1,#3,
+                                                                                     2,
+                                                                                     4,3
+                                                                                     # 4#,2
                                                                                      #6,5,
     )])  +
     scale_x_continuous(limits = c(0, 24), label = label_yrs ) +
     theme(
-      axis.title.y = element_blank(),
+      axis.title = element_blank(),
       legend.justification=c(0, 1)) +
     # legend.position = "none")+
     labs(x = "Year", y = "Standardized value", colour = "Other BCCM")
@@ -377,6 +403,18 @@ hist(npgo0$value)
     coord_cartesian(clip = "off")+
     theme_void()
 
-  y_lab_big + (ev1/ev2/ev3) + patchwork::plot_layout(width = c(0.1,1))
+  y_lab_big + (ev1/ev2/ev3) + plot_layout(width = c(0.1,1))
 
   ggsave("figs/man/ev-indices-spr.png", width = 6, height = 4.3)
+
+
+  ## make a small version for the flow chart
+  y_lab_big <- ggplot() +
+    annotate(geom = "text", x = 1, y = 1, size = 4,
+             colour = "grey30",
+             label = "Standardized value", angle = 90) +
+    coord_cartesian(clip = "off")+
+    theme_void()
+  y_lab_big + (ev1/ev2/ev3) + patchwork::plot_layout(width = c(0.1,1))&theme(legend.title = element_blank())
+
+  ggsave("figs/man/chart-ev-indices.png", width = 4.25, height = 2.7)
