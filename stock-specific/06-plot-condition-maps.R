@@ -86,6 +86,8 @@ for (j in seq_along(pred_files)){
   g <- g + facet_wrap(~year, ncol = 8) +
     ggtitle(paste0(species, ": ", unique(m$data$group_name), " ", model_name[i]))
 
+  dir.create(paste0("stock-specific/", spp, "/figs/cond-", model_name[i], ""),
+             showWarnings = FALSE)
   ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name[i], "/condition-pred-wide-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
          height = 8, width = 8
@@ -120,8 +122,13 @@ for (j in seq_along(pred_files)){
                         rotation_angle = 30, show_raw_data = TRUE
   )
 
-  g <- g + facet_wrap(~year, ncol = 8) +
+  g <- g + facet_wrap(~year, ncol = 8)
+
+  if(FALSE){
+  # if you want title
+  g <- g +
     ggtitle(paste0(species, ": ", unique(m$data$group_name), " ", model_name[i]))
+  }
 
   ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name[i], "/condition-map-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),

@@ -114,6 +114,7 @@ split_index_by_survey <- function(model, grid, species, group_name){
 #' @export
 #'
 map_density <- function(dat, filename, variable = "density_trimmed",
+                        variable_label = "Density \n(kg/ha)",
                         col_trans = fourth_root_power_trans()
 ) {
 
@@ -140,7 +141,7 @@ map_density <- function(dat, filename, variable = "density_trimmed",
     facet_wrap(~year) +
     scale_fill_viridis_c(trans = col_trans) +
     scale_colour_viridis_c(trans = col_trans) +
-    labs(x = "", y = "")
+    labs(x = "", y = "", colour = variable_label, fill = variable_label)
 }
 
 

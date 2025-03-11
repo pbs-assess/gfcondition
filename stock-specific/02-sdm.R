@@ -446,7 +446,9 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     p <- predict(m, re_form_iid = NA, newdata = grid, return_tmb_object = TRUE)
 
     map_density(p, pfn, variable = "density_trimmed") +
-      labs(title = paste0(species, ": total biomass (", dens_model_name, ")"),
+      labs(title = paste0(species, ": total biomass"
+                          #(", dens_model_name, ")"
+                          ),
            # subtitle = paste0("Variance explained:", TODO: r2_total$R2[1])
       )
 
@@ -603,7 +605,9 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     )
 
     map_density(pf, pmfn) +
-      labs(title = paste0(species, ": mature female biomass (", dens_model_name, ")"))
+      labs(title = paste0(species, ": mature female biomass"
+      # (", dens_model_name, ")"
+      ))
 
     ggsave(paste0("stock-specific/", spp, "/figs/density-map-", m1, ".png"),
            height = fig_height, width = fig_width
@@ -734,7 +738,9 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     )
 
     map_density(pm, pmfn2) +
-      labs(title = paste0(species, ": mature male biomass (", dens_model_name, ")"))
+      labs(title = paste0(species, ": mature male biomass"
+      # (", dens_model_name, ")"
+      ))
 
     ggsave(paste0("stock-specific/", spp, "/figs/density-map-", m2, ".png"),
            height = fig_height, width = fig_width
@@ -885,7 +891,9 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
           )
 
           map_density(pi, pifn) +
-            labs(title = paste0(species, ": immature biomass (", dens_model_name, ")"))
+            labs(title = paste0(species, ": immature biomass"
+            # (", dens_model_name, ")"
+            ))
 
           ggsave(paste0("stock-specific/", spp, "/figs/density-map-", m3, ".png"),
                  height = fig_height, width = fig_width
