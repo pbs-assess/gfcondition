@@ -27,7 +27,7 @@ index_list <- bind_rows(index_list, index_list2)
 
 # Function for generating condition indices ----
 
-calc_condition_indices <- function(maturity, males, females, add_density) {
+calc_condition_indices <- function(maturity, males, females, add_density, get_mvn_sims = TRUE) {
 
   source("stock-specific/00-set-options.R")
   source("R/refine-condition-models.R", local = TRUE)
@@ -970,6 +970,22 @@ calc_condition_indices <- function(maturity, males, females, add_density) {
                 group_tag, "-", model_name, "-", knot_distance, "-km.png"),
     height = fig_height / 2, width = fig_width / 2
   )
+
+  # Get MVN simulation samples ----
+  if (get_mvn_sims) {
+    psims <- predict(m, newdata = grid, nsim = 100)
+    isims <- get_index_sims(psims, area = grid$prop_density, return_sims = TRUE)
+
+
+    dir.create(paste0("stock-specific/", spp, "/output/cond-index-sims/"), showWarnings = FALSE)
+    dir.create(paste0("stock-specific/", spp, "/output/cond-index-sims/", model_name, "/"), showWarnings = FALSE)
+
+    saveRDS(isims, paste0(
+      "stock-specific/", spp, "/output/cond-index-sims/", model_name,
+      "/cond-index-sims-", group_tag, "-", spp, "-",
+      model_name, "-", knot_distance, "-km.rds"
+    ))
+  }
 
 
   # Get survey-specific condition indices ----
