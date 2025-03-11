@@ -8,6 +8,9 @@ library(sdmTMB)
 library(gfplot)
 library(ggsidekick)
 library(patchwork)
+
+make_all_sdms <- function(only_sampled = FALSE) {
+
 fig_height <- 8
 fig_width <- 10
 
@@ -63,23 +66,29 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     )
   )
 
-  ds <- readRDS(paste0("stock-specific/", spp, "/output/", "split-catch-data-w-effort-", spp, ".rds"))
+  # check year we should start model
+  cond_years <- readRDS(paste0("stock-specific/", spp, "/data/", "tidy-survey-samples-", spp, ".rds")) |>
+    filter(!is.na(weight) & !is.na(length) & !is.na(sex)) |>
+    group_by(year) |> summarise(n = n()) |>
+    filter(n > 30)
+
+  ds <- readRDS(paste0("stock-specific/", spp, "/output/", "split-catch-data-w-effort-", spp, ".rds")) %>%
+    ## early MSSM not reliable for fish that aren't rockfish, flatfish, or lingcod...
+    ## but probably rare that sufficient condition samples available that early anyway
+    # filter(survey_type != "MSSM <03") |>
+    # filter(year > 1983) # too slow to fit using only MSSM from 1975 to 1983
+    filter(year >= min(cond_years$year)-1)
 
   # Select what data to include ----
   ds <- ds %>%
-    # filter(!(usability_code %in% c(5,9,13))) %>%
-    # filter(usability_code %in% c(1, 22)) %>%
-    filter(usability_code %in% c(0, 1, 22, 16, 6)) %>%
+    filter(usability_code %in% c(0, 1, 2, 6, 22)) %>%
     # if speed recorded, it isn't too slow
-    filter(!is.na(speed_mpm) & speed_mpm != 0 & speed_mpm >= 50) %>%
+    filter(is.na(speed_mpm) | speed_mpm >= 50) %>%
     # if time recorded, it was at least 10 min
-    filter(!is.na(duration_min) & duration_min != 0 & duration_min >= 10) %>%
+    filter(is.na(duration_min) | duration_min >= 10) %>%
     # if tow length available it's at least 200m
     filter(is.na(tow_length_m) | tow_length_m > 500) %>%
-    filter(area_swept > 0) %>%
-    # filter(year > 1983) # too slow to fit using only MSSM from 1975 to 1983
-    # early MSSM not reliable for small fish
-    filter(survey_type != "MSSM <03" & year >= 2000)
+    filter(area_swept > 0)
 
   ds <- ds %>% filter(!is.na(catch_weight))
   ds <- ds %>% filter(!is.na(depth_m))
@@ -482,7 +491,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
   ## mature female model ----
 
   d2 <- d1 %>%
-    filter(year > 2001) %>%
+    # filter(year > 2001) %>%
     filter(!is.na(group_catch_est))
 
   if(only_sampled){
@@ -625,7 +634,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
   d2b <- d %>%
     filter(group_name %in% c("Males", "Mature males")) %>%
     # filter(group_name == "Mature males") %>%
-    filter(year > 2001) %>%
+    # filter(year > 2001) %>%
     filter(!is.na(group_catch_est))
 
   if(only_sampled){
@@ -761,7 +770,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
 
     d3 <- d %>%
       filter(group_name %in% c("Immature")) %>%
-      filter(year > 2001) %>%
+      # filter(year > 2001) %>%
       filter(!is.na(group_catch_est))
 
     if(only_sampled){
@@ -1021,4 +1030,10 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
   ),
   height = fig_height, width = fig_width
   )
+}
 
+make_all_sdms()
+
+## and then repeat using only surveys with specimen data ----
+# ## this only affects maturity specific models
+make_all_sdms(only_sampled = TRUE)
