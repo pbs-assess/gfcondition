@@ -268,6 +268,7 @@ fit_all_distribution_models <- function(species, only_sampled) {
       usability_name = fct_reorder(usability_name, usability_code),
       # correct outlier duration for Hake, looks like date problem
       duration_min = ifelse(duration_min > 1000, 30, duration_min),
+      duration_min = ifelse(duration_min == 0, NA_real_, duration_min), #new
       # get rid of false 0 and huge outliers for doorspread
       doorspread_m = ifelse(doorspread_m == 0|doorspread_m > 150, NA_real_, doorspread_m),
       mouth_width_m = ifelse(mouth_width_m == 0, NA_real_, mouth_width_m),
@@ -292,16 +293,17 @@ fit_all_distribution_models <- function(species, only_sampled) {
 
   # Select what data to include ----
   ds <- ds %>%
-    # filter(!(usability_code %in% c(5,9,13))) %>%
-    # filter(usability_code %in% c(1, 22)) %>%
-    filter(usability_code %in% c(0, 1, 22, 16, 6)) %>%
+    # keep only usabilities that seem reasonable
+    # filter(usability_code %in% c(0, 1, 6, 16, 22)) %>% # old version
+    filter(usability_code %in% c(0, 1, 2, 6, 22)) %>%
+    # 16 includes bouncing nets, so should be excluded
+    # 2 could be added, since the definition of fail is reason specific
     # if speed recorded, it isn't too slow
-    filter(!is.na(speed_mpm) & speed_mpm != 0 & speed_mpm >= 50) %>%
+    filter(is.na(speed_mpm) | speed_mpm >= 50) %>%
     # if time recorded, it was at least 10 min
-    filter(!is.na(duration_min) & duration_min != 0 & duration_min >= 10) %>%
-    # if tow length available it's at least 200m
-    filter(is.na(tow_length_m) | tow_length_m > 500) %>%
-    filter(area_swept > 0) %>%
+    filter(is.na(duration_min) | duration_min == 0 | duration_min >= 10) %>%
+    # if tow length available it's at least 500m
+    filter(is.na(tow_length_m) | tow_length_m > 500) %>%  filter(area_swept > 0) %>%
     # filter(year > 1983) # too slow to fit using only MSSM from 1975 to 1983
     # early MSSM not reliable for small fish
     filter(survey_type != "MSSM <03" & year >= 2000)
