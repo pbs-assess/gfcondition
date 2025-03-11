@@ -10,6 +10,7 @@ update_mesh <- function(x) { # x = fitted sdmTMB model
 #'
 format_survey_labels <- function(data) {
   data |> mutate(
+      survey_abbrev = ifelse(survey_series_id == 79, "TRIENNIAL", survey_abbrev),
       survey_abbrev = ifelse(survey_series_id == 68, "HAKE", survey_abbrev),
       survey_abbrev = ifelse(survey_series_id == 5, "HS PCOD", survey_abbrev),
       survey_abbrev = ifelse(survey_series_id == 11, "THORNYHEAD", survey_abbrev),

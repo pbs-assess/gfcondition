@@ -4,12 +4,13 @@
 species <- "Lingcod"
 # species <- "Pacific Halibut"
 # species <- "Dover Sole"
+# species <- "Pacific Cod"
 
 # 1. Data retrieval and filtering options ----
 
 ## if needing raw data, where is it coming from? ----
 get_data_at_pbs <- FALSE
-get_PE_cached_data <- FALSE
+get_PE_cached_data <- TRUE
 
 ## set major areas ----
 ## this defines the "stock"
@@ -30,7 +31,9 @@ tidy_surveys_included <- c("HBLL OUT N", "HBLL OUT S",
 other_surveys_kept <- c(5, # PCOD
                         9, # Rockfish survey pre 2000?
                         11, # THORNYHEAD
-                        68) # HAKE
+                        # 79, # Triennial
+                        68 # HAKE
+                        )
 
 ## Notes on SABLE:
 ## at different time of year than all the others and only has weights for certain species
@@ -71,10 +74,6 @@ sdm_surveys_included <- c(
   "HAKE"
 )
 
-## or use only surveys with specimen data ----
-## this only affects maturity specific models
-only_sampled <- FALSE
-only_sampled <- TRUE
 
 ## or use only synoptic data for all density models? ----
 only_synoptic <- FALSE
@@ -84,14 +83,24 @@ if(only_synoptic) dens_model_name_long <- "depth and DOY"
 
 # 3. Condition model settings ----
 
+# this applies only to units of log_a and b
+# set_weight_scale <- 1/1000 # in kg
+set_weight_scale <- 1 # in g
+
 # option to add prefix to models otherwise named with "year-month"
 cond_model_prefix <- ""
 
 ## review x-plot-sdm-effects.R figs before choosing which models to use here
 
+if(species == "Lingcod") {
 dens_model_total <- "dln-2024-11" # this is for total
 dens_model_name1 <- "dln-split-2024-11" # these are `all catches' models
 dens_model_name2 <- "dln-only-sampled-2024-11" # these are `sampled catches' models
+} else {
+dens_model_total <- "dln-2024-12" # this is for total
+dens_model_name1 <- "dln-split-2024-12" # these are `all catches' models
+dens_model_name2 <- "dln-only-sampled-2024-12" # these are `sampled catches' models
+}
 
 ## should we exclude samples from years with fewer than some threshold?
 # min_yr_count <- 10 # current main folder, hasn't been run with density yet
@@ -99,7 +108,11 @@ min_yr_count <- NULL
 
 # to run using future package
 # gfcondition must be installed
-use_parallel <- TRUE
+
+use_parallel <- FALSE
+# use_parallel <- TRUE
+
+split_index_by_survey <- TRUE
 
 # A. Global options ----
 
@@ -109,16 +122,19 @@ ggplot2::theme_set(ggsidekick::theme_sleek())
 
 # B. Split-by-maturity settings ----
 
-split_by_maturity <- TRUE
+## option for a version that ignores maturity ----
+# maturity_possible <- FALSE
+split_by_maturity <- maturity_possible <- TRUE
+
 split_by_sex <- TRUE
 immatures_pooled <- TRUE
+
 
 mat_year_re <- FALSE
 mat_threshold <- 0.5
 set_min_sample_number <- 6 # sample cutoff for splits, function default is 10
 
-## option for a version that ignores maturity ----
-maturity_possible <- TRUE
+
 
 ## only generate split data and some exploratory plots ----
 stop_early <- FALSE
