@@ -86,7 +86,9 @@ dsamp <- dsamp %>%
                                                               "Quillback Rockfish"))))
 
 check_for_duplicates2 <- dsamp[duplicated(dsamp$specimen_id), ]
-if(nrow(check_for_duplicates2)>0){ stop(paste(species, "has duplicate specimen ids."))}
+if(nrow(check_for_duplicates2)>0){
+  all_duplicates2 <- dsamp[duplicated(dsamp$specimen_id)|duplicated(dsamp$specimen_id, fromLast=TRUE),]
+  stop(paste(species, "has duplicate specimen ids."))}
 
 # dx <- dsamp[duplicated(dsamp$specimen_id) |
 #               duplicated(dsamp$specimen_id, fromLast=TRUE), ] |>
@@ -103,7 +105,9 @@ dset <- dset |>
   filter(survey_abbrev %in% sdm_surveys_included)
 
 check_for_duplicates <- dset[duplicated(dset$fishing_event_id), ]
-if(nrow(check_for_duplicates)>0){ stop(paste(species, "has duplicate event ids."))}
+if(nrow(check_for_duplicates)>0){
+  all_duplicates <- dset[duplicated(dset$fishing_event_id)|duplicated(dset$fishing_event_id, fromLast=TRUE),]
+  stop(paste(species, "has duplicate event ids."))}
 
 
 
