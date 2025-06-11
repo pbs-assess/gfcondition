@@ -5,6 +5,55 @@ update_mesh <- function(x) { # x = fitted sdmTMB model
   make_mesh(x$data, x$spde$xy_cols, mesh = x$spde$mesh)
 }
 
+#' functions for getting final model structures
+#' @export
+get_model_structure <- function(fit){
+  if(sdmTMB:::is_delta(fit)){
+    tibble(`Range shared` = range_shared(fit),
+       `Spatial field on 1st component` = spatial_estimated(fit)[1],
+       `Spatial field on 2nd component` = spatial_estimated(fit)[2],
+       `Spatiotemporal field on 1st component` = spatiotemporal_estimated(fit)[1],
+       `Spatiotemporal field on 2nd component` = spatiotemporal_estimated(fit)[2],
+       `Delta model` = sdmTMB:::is_delta(fit),
+       Anisotropy = fit$call$anisotropy,
+       Family = ifelse(sdmTMB:::is_delta(fit), fit$family$clean_name,fit$family$family)
+    )
+  } else {
+    # browser()
+    # can be simplified as long as column names match
+    tibble(`Range shared` = range_shared(fit),
+           `Spatial field on 1st component` = spatial_estimated(fit)[1],
+           # `Spatial field on 2nd component` = spatial_estimated(fit)[2],
+           `Spatiotemporal field on 1st component` = spatiotemporal_estimated(fit)[1],
+           # `Spatiotemporal field on 2nd component` = spatiotemporal_estimated(fit)[2],
+           # `Delta model` = sdmTMB:::is_delta(fit),
+           Anisotropy = fit$call$anisotropy,
+           Family = fit$family$family
+    )
+  }
+}
+
+#' @export
+#'
+spatial_estimated <- function(x) {
+  p <- get_pars(x)
+  !p$ln_tau_O == 0
+}
+
+#' @export
+#'
+spatiotemporal_estimated <- function(x) {
+  p <- get_pars(x)
+  !p$ln_tau_E == 0
+}
+
+#' @export
+#'
+range_shared <- function(x) {
+  p <- get_pars(x)
+  (length(unique(p$ln_kappa)) == 1 && !sdmTMB:::is_delta(x)) ||
+    (length(unique(p$ln_kappa)) == 2 && sdmTMB:::is_delta(x))
+}
 
 #' @export
 #'
