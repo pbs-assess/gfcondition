@@ -421,12 +421,13 @@ m <- fit_dfa(
 is_converged(m, threshold = 1.1)
 
 
-# range(m$monitor$Bulk_ESS)
+range(m$monitor$Bulk_ESS)
 range(m$monitor$Rhat)
 # row.names(m$monitor)
 
+
 checks <- m$monitor |>
-  filter(Rhat >1.01|Bulk_ESS<300|Tail_ESS<300) |>
+  filter(Rhat >1.01|Bulk_ESS<400|Tail_ESS<400) |>
   as_tibble(rownames = "var")
 checks |> View()
 # xstar are random walk trends 1 year forecasting in the future so can be ignored
