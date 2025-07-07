@@ -729,24 +729,18 @@ covars <- pro_covar1
 covarsb <- pro_covar1b
 
 if(trend_count>1){
-
-  # pro_covar2 <- pt0
   # pro_covar2 <- pp0   #~ males and imm
-  # pro_covar2 <- pink1
   # pro_covar2 <- sst0   # females
   # pro_covar2 <- tob0   #~
   # pro_covar2 <- o20
   pro_covar2 <- npgoF
-  # pro_covar2 <- so20
 
   if(set_group == "mature females"){
-      # pro_covar2 <- pt0
       pro_covar2 <- npgoF   #~ males and imm
       # # pro_covar2 <- pp0   #~ males and imm
       # pro_covar2 <- sst0   # females
       # # pro_covar2 <- tob0   #~
       # pro_covar2 <- o20
-      # pro_covar2 <- so20
   }
 
   pro_covar2 <- format_process_cov(pro_covar2, trend_title = "Trend 2")
@@ -757,21 +751,18 @@ if(trend_count>1){
   cor2 <- as.data.frame(correlation)
 
 
-  # pro_covar2b <- pt0   # imm and males
   pro_covar2b <- pp0
-    # pro_covar2b <- pink1
+  # pro_covar2b <- pink1
   # pro_covar2b <- sst0
   # pro_covar2b <- tob0   # males
-  # pro_covar2b <- so20
 
   if(set_group == "mature females"){
     # pro_covar2b <- pdo1
       # pro_covar2b <- pp0
-        # pro_covar2b <- o2p0
-        pro_covar2b <- pdoF
+      # pro_covar2b <- o2p0
+      pro_covar2b <- pdoF
       # pro_covar2b <- sst1
       # pro_covar2b <- tob1   # males
-      # pro_covar2b <- so20   # females
       # pro_covar2b <- oni0
   }
 
@@ -797,12 +788,10 @@ if(trend_count>1){
 if(trend_count>2){
 
   pro_covar3 <- pdo0   # imm
-  # pro_covar3 <- pt0
   # pro_covar3 <- pp0   #~ males and imm
   # pro_covar3 <- sst0   # females
   # pro_covar3 <- tob0   #~
   # pro_covar3 <- o20
-  # pro_covar3 <- so20
 
   pro_covar3 <- format_process_cov(pro_covar3, trend_title = "Trend 3")
 
@@ -817,7 +806,6 @@ if(trend_count>2){
   # pro_covar3b <- pp0
   # pro_covar3b <- sst0
   # pro_covar3b <- tob0   # males
-  # pro_covar3b <- so20
 
   pro_covar3b <- format_process_cov(pro_covar3b, trend_title = "Trend 3")
   correlation <- trend_cor(r, pro_covar3b$value,

@@ -9,39 +9,42 @@ library(patchwork)
 theme_set(ggsidekick:::theme_sleek()+
             theme(plot.margin = unit(c(0.1, 0.15, 0.1, 0), "inches")))
 
-
 source("analysis/00-species-list.R")
 
-# fig_height <- 4 * 2
-# fig_width <- 5 * 2
-# variable <- "days_to_solstice"
-variable <- "log_density_c"
-xlabel <- "Local log density of maturity class (centered on mean)"
-
-# model_name <- "apr-2024" # might not need this because density removed from ones lacking a negative effect.
-# model_name <- "apr-2024-density"
-# model_name <- "apr-2024-not-total-density"
 model_name <- "2024-09-doy-ld0c"
 
-# group_tag <- "mat-m"
-group_tag <- "mat-fem"
-# group_tag <- "imm"
+arg_list <- expand.grid(model_name = model_name,
+                          variable = c(
+                                       # "days_to_solstice",
+                                       "log_density_c"
+                                       ),
+                          group_tag = c("imm"
+                                        # "mat-fem",
+                                        # "mat-m"
+                                        )
+)
+
+plot_condition_effects <- function(model_name, variable, group_tag) {
+
+variable <- as.character(variable)
+
+density_label <- "Local biomass density of maturity class (slopes are in log space)"
 
 f <- list.files(paste0("data-generated/condition-models-", group_tag, "/", model_name, "/"),
                 pattern = ".rds", full.names = TRUE)
 
 m <- purrr::map(f, readRDS)
 
-
-
 p <- list()
 p2 <- list() #for filtered version
 
+# browser()
+
 for (i in seq_along(m)){
-# for (i in 11:14){
+# for (i in 34:35){
+
   s <- sanity(m[[i]], gradient_thresh = 0.005)
 
-if(all(s)){
   if (variable == "log_density_c") {
     nd <- data.frame(
       days_to_solstice = 0,
@@ -54,7 +57,38 @@ if(all(s)){
       dens_dev = 0,
       year = max(m[[i]]$data$year) # a chosen year
     )
-    xlabel <- "Local log density of maturity class (centered on mean)"
+    xlabel <- density_label #"Local log density of maturity class (centered on mean)"
+  }
+
+  if(variable == "days_to_solstice") {
+    nd <- data.frame(
+      days_to_solstice = seq(min(m[[i]]$data$days_to_solstice),
+                             max(m[[i]]$data$days_to_solstice),
+                             length.out = 50
+      ),
+      survey_group = "TRAWL",
+      log_density_c = 0,
+      ann_log_density_c = 0,
+      dens_dev = 0,
+      year = max(m[[i]]$data$year) # a chosen year
+    )
+    xlabel <- "Days from solstice"
+  }
+
+if(all(unlist(s[1:7]))){
+  if (variable == "log_density_c") {
+    nd <- data.frame(
+      days_to_solstice = 0,
+      survey_group = "TRAWL",
+      log_density_c = seq(min(m[[i]]$data$log_density_c),
+                          max(m[[i]]$data$log_density_c),
+                          length.out = 50
+      ),
+      ann_log_density_c = 0,
+      dens_dev = 0,
+      year = max(m[[i]]$data$year) # a chosen year
+    )
+    xlabel <- density_label #"Local log density of maturity class (centered on mean)"
   }
 
   if(variable == "days_to_solstice") {
@@ -77,6 +111,8 @@ pd <- predict(m[[i]], newdata = nd, se_fit = TRUE, re_form = NA)
 t <- tidy(m[[i]], conf.int = TRUE)
 
 set_alpha <- 0.8
+
+# browser()
 
 p[[i]] <- ggplot(pd, aes(.data[[variable]], exp(est),
                ymin = exp(est - 1.96 * est_se),
@@ -126,9 +162,7 @@ if (variable == "log_density_c") {
          y = "condition") +
     theme(axis.title = element_blank())
 
-
-
-  xlabel <- "Local biomass density of maturity class (slopes are in log space)"
+  xlabel <- density_label #"Local biomass density of maturity class (slopes are in log space)"
 
 p[[i]] <- p[[i]] + ggtitle(paste0(stringr::str_to_title(m[[i]]$data$species_common_name)), subtitle = paste0(
                "slope: ", round(t$estimate[t$term == variable], 3),
@@ -149,7 +183,6 @@ if(m[[i]]$data$species_common_name[1] %in% tolower(c(species_to_remove))) { p2[[
 }
 
 p2 <- p2 %>% discard(is.null)
-
 
 if(group_tag == "mat-m") {group_label <- "Mature male"}
 if(group_tag == "mat-fem") {group_label <- "Mature female"}
@@ -198,10 +231,14 @@ ggsave(paste0("figs/cond-effects-", variable, "-trans-",
 )
 
 
-ggsave(paste0("figs/cond-effects-", variable, "-trans-",
+ggsave(paste0("figs/man/cond-effects-", variable, "-trans-",
               model_name, "-", group_tag, "-filtered-s.png"),
        height = 18, width = 14)
 
+}
+
+
+pmap(arg_list, plot_condition_effects)
 
 
 ## would work if layout stayed the same

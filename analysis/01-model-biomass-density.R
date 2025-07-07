@@ -1,11 +1,8 @@
 # 1. Create a total biomass distribution model (to use for prediction grid)
 # 2. Create prediction grid with density and depth
-# TODO: get matching depth for use in models and on prediction grids?
-
 devtools::load_all()
 
 options(scipen = 100, digits = 4)
-
 
 library(future)
 library(tidyverse)
@@ -24,37 +21,21 @@ dir.create(paste0("data-generated/density-index/"), showWarnings = FALSE)
 source("analysis/00-species-list.R")
 
 # # # # or override with custom subset
-species_list <- list(
+# species_list <- list(
 # "Lingcod"
-# "Pacific Cod",
-# # "Dover Sole",#
-# # "Rex Sole", #
-# # "Flathead Sole",#
-# # "Southern Rock Sole",#
-# # "Slender Sole",#
-# # "Pacific Sanddab",#
-"Pacific Halibut"#
-# # "Butter Sole",
-# # "Pacific Hake",#
-# # # "Pacific Tomcod",
-# # "Spotted Ratfish",
-# # "Longnose Skate",
-# # "Big Skate",
-# # "Sandpaper Skate"
-)
+# )
 
 # Function for running species density models --------
 
 fit_all_distribution_models <- function(species, only_sampled) {
 
-  # species <- "North Pacific Spiny Dogfish"
   set_utm_crs <- 32609
 
   ## for generating split data and some exploratory plots
-  # stop_early <- TRUE
-  stop_early <- FALSE
+  stop_early <- TRUE
+  # stop_early <- FALSE
 
-  ## this only affects maturity specific models
+  ## this only affects maturity specific models (only needed if not using function)
   # only_sampled <- FALSE
   # only_sampled <- TRUE ## need to reun for halibut and pcod only
 
@@ -70,42 +51,33 @@ fit_all_distribution_models <- function(species, only_sampled) {
   knot_distance <<- 20
   set_priors <<- sdmTMBpriors(
     matern_s = pc_matern(
-      range_gt = knot_distance, # *1.5
+      range_gt = knot_distance,
       sigma_lt = 2
     ),
     matern_st = pc_matern(
-      range_gt = knot_distance, # *1.5
+      range_gt = knot_distance,
       sigma_lt = 2
     )
   )
 
-  # set_family <- delta_gengamma()
-  # set_family2 <- delta_lognormal()
   set_family <- delta_lognormal()
-  # set_family2 <- delta_gamma()
   set_family2 <- tweedie()
 
-  # ...0 is the total, updated models are just for splits
-  # using 6 sample cutoff for splits though function default is 10
-  # old figures with "shrunk" in name have a bug in the split function such that sets without sampled females got the average rather than true proportions
-
-  # dens_model_name0 <- "dln-all-"
+  # current model name
   dens_model_name0 <- "dln-ss5"
 
   if(only_sampled) {
-    dens_model_name <- "dln-only-sampled"
-    # dens_model_name0 <- "dgg-all-may-2024"
-    # dens_model_name <- "dgg-only-sampled-may-2024"
+    dens_model_name <- "dln-only-sampled" # current version
+    ## if updating only sampled version
+    # dens_model_name <- paste0(dens_model_name0, "-only-sampled")
   } else {
-  # use SD to choose between aggregating by year or survey first, then survey, then all
     dens_model_name <- paste0(dens_model_name0, "-split")
-  #   dens_model_name0 <- "dgg-all-may-2024"
-  #   dens_model_name <- "dgg-all-split-may-2024"
   }
 
   ### add date -----
   sysdate <- unlist(strsplit(as.character(Sys.Date()), "-"))
 
+  ## add data run?
   # dens_model_name0 <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
   # dens_model_name <- paste0(dens_model_name, sysdate[1], "-", sysdate[2], "")
 
@@ -138,8 +110,6 @@ fit_all_distribution_models <- function(species, only_sampled) {
   source("analysis/00-custom-maturities.R")
   replace_with_custom_maturity(species)
 
-  # if (grepl("Skate", species, fixed = TRUE)) {}
-
   spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 
 
@@ -159,9 +129,8 @@ fit_all_distribution_models <- function(species, only_sampled) {
   check_for_duplicates2 <- dsamp[duplicated(dsamp$specimen_id), ]
   if(nrow(check_for_duplicates2)>0){ stop(paste(species, "has duplicate specimen ids."))}
 
-  # I'm not using sample is so shouldn't be any unless something else can cause this
-  # test_event <- dset[ dset$fishing_event_id == 329270, ]
-
+  ## not using sample_id so shouldn't be any unless something else can cause this
+  ## manual checks?
   # unique(dset$survey_abbrev)
   # unique(dsamp$survey_abbrev)
   # unique(dsamp$maturity_code)
@@ -175,20 +144,17 @@ fit_all_distribution_models <- function(species, only_sampled) {
   # temporary filter until lengths in wrong units fixed
   if(spp == "lingcod"){
   dsamp <- filter(dsamp, length > 8)
-  # dset2 <- filter(dset, catch_weight > 900)
   }
 
   sets_mat_m <- filter(dsamp, !is.na(maturity_code), !is.na(length), maturity_code != 0, sex == 1)
   sets_mat_f <- filter(dsamp, !is.na(maturity_code), !is.na(length), maturity_code != 0, sex == 2)
 
-  # browser()
-  # if(min(length(unique(sets_mat_f$fishing_event_id)), length(unique(sets_mat_f$fishing_event_id))) >= 20){
-  ## shouldn't one of these be for males? TODO: update for next run but not likely to change much
   if(min(length(unique(sets_mat_m$fishing_event_id)), length(unique(sets_mat_f$fishing_event_id))) >= 20){
     set_sample_id_re <- TRUE
   }else{
     set_sample_id_re <- FALSE
   }
+
 
 # Split by maturity ----
   dss <- gfplot::split_catch_by_sex(dset, dsamp,
@@ -207,17 +173,12 @@ fit_all_distribution_models <- function(species, only_sampled) {
     plot = maturity_possible
   )
 
-  # browser()
-
   dir.create(paste0("data-generated/split-catch-data/"), showWarnings = FALSE)
 
   saveRDS(dss, paste0("data-generated/split-catch-data/", spp, ".rds"))
 
-
-
   # dss$maturity_plot
   # gfplot::plot_mat_ogive(dss$m)
-
   # dss$weight_plot
   # dss$data %>% filter(group_catch_est >0) %>%
   #     ggplot() + geom_histogram(aes(log(group_catch_est)))
@@ -280,8 +241,6 @@ fit_all_distribution_models <- function(species, only_sampled) {
       mean_speed = ifelse(is.na(mean_speed), mean_series_speed, mean_speed),
       speed_mpm = ifelse(speed_mpm == 0|is.na(speed_mpm), mean_speed, speed_mpm),
       log_depth = log(depth_m),
-      # TODO: next run change to depth_most or retrieve updated data pull
-      # log_depth = log(depth_most),
       log_depth_c = log_depth - 5, # mean and median for whole data set
       area_swept = ifelse(is.na(tow_length_m),
         doorspread_m * duration_min * speed_mpm,
@@ -313,11 +272,11 @@ fit_all_distribution_models <- function(species, only_sampled) {
   ds <- ds %>% filter(!is.na(area_swept))
   ds <- ds %>% filter(!is.na(latitude))
   ds <- ds %>% filter(!is.na(longitude))
+
   ds$area_swept_km2 <- ds$area_swept / 1000000  # converts m2 to km2
   ds$offset <- log(ds$area_swept_km2*100) # offset in ha
   ds$survey_type <- relevel(ds$survey_type, "SYN")
 
-  # browser()
 
   # Which surveys to include? ----
   # keep only surveys that caught this species within years of interest
@@ -329,14 +288,10 @@ fit_all_distribution_models <- function(species, only_sampled) {
 
   which_surv <- which_surveys(ds) %>% ungroup() %>%
     select(-group_name) %>%
-    # filter(group_name %in% c("Mature", "Mature females")) %>%
     group_by(survey_type) %>%
     summarize_all(max) %>%
     filter(
-      # round(prop_pos, 2) >= 0.01 &
       prop_pos >= 0.01 &
-      ## all species-maturity classes met this before I added YE
-      # round(max_prop_pos, 2) >= 0.05 &
       max_pos_by_year >= 3 &
       !(prop_years_w_0 > 0.5 & max_pos_by_year < 5)
      )
@@ -479,11 +434,9 @@ fit_all_distribution_models <- function(species, only_sampled) {
     d1 <- d %>%
       filter(group_name %in% c("Mature", "Females", "Mature females"))
 
-    # if(nrow(d1a)!= nrow(d1)) { print("")}
 
   ## check what years we have data for ----
-    ## used to filter grid
-
+  ## used to filter grid
   survey_years <- d1 %>%
     select(survey_abbrev, year) %>%
     distinct() %>%
@@ -496,13 +449,13 @@ fit_all_distribution_models <- function(species, only_sampled) {
   all_years <- unique(d1$year)
   extra_years <- sdmTMB:::find_missing_time(d1$year)
 
-  # check that my data and grid are on the same XY scale
-  range(grid$year)
-  range(d$year)
-  range(d$X)
-  range(grid$X)
-  range(d$Y)
-  range(grid$Y)
+  # # check that my data and grid are on the same XY scale
+  # range(grid$year)
+  # range(d$year)
+  # range(d$X)
+  # range(grid$X)
+  # range(d$Y)
+  # range(grid$Y)
 
   dp <- d1 %>% filter(catch_weight > 0)
 
@@ -512,12 +465,9 @@ fit_all_distribution_models <- function(species, only_sampled) {
   rm(dsamp, dset, ds, dp)
 
   # Make mesh for total density ----
-
   mesh <- make_mesh(d1, c("X", "Y"), cutoff = knot_distance)
 
-  # browser()
   ## plot mesh ----
-
   plot_mesh <- function(
     mesh_obj = mesh,
     data_obj = d1,
@@ -540,7 +490,6 @@ fit_all_distribution_models <- function(species, only_sampled) {
       data = filter(data_obj, .data[[catch_var]] > 0)
     ) +
     facet_wrap(~year) +
-    # scale_shape_discrete() +
     scale_fill_viridis_c(trans = "fourth_root_power") +
     scale_color_viridis_c(trans = "fourth_root_power") +
     ggtitle(paste0(species, " (", group, ")")) +
@@ -548,8 +497,6 @@ fit_all_distribution_models <- function(species, only_sampled) {
           axis.title = element_blank(),
           axis.ticks = element_blank())
   }
-
-# browser()
 
   d1$density_kgha <- d1$catch_weight/(d1$area_swept_km2*100) # converts to ha
 
@@ -576,7 +523,6 @@ fit_all_distribution_models <- function(species, only_sampled) {
 
   mesh$mesh$n
 
-  # browser()
 
 # Start modeling ----
 
@@ -614,14 +560,7 @@ fit_all_distribution_models <- function(species, only_sampled) {
       time = "year",
       extra_time = extra_years,
       family = set_family,
-      # control = sdmTMBcontrol(
-      #   # start = list(logit_p_mix = qlogis(0.01)),
-      #   # map = list(logit_p_mix = factor(NA)),
-      #   # nlminb_loops = 1L,
-      #   # newton_loops = 1L
-      # ),
       priors = set_priors
-      # anisotropy = TRUE
     )
     }
     saveRDS(m, fm)
@@ -632,8 +571,6 @@ fit_all_distribution_models <- function(species, only_sampled) {
     saveRDS(m, fm)
   } else {
     m <- readRDS(fm)
-    # m <- sdmTMB:::update_version(m)
-    # browser()
     if (!all(sanity(m, gradient_thresh = 0.005))) {
         m <- refine_model(m, alternate_family = set_family2, use_priors = set_priors)
     }
@@ -648,15 +585,12 @@ fit_all_distribution_models <- function(species, only_sampled) {
   # TODO: add R2 once it's working for delta models
   # r2_total <- r2.sdmTMB(m)
 
-
   if (is.null(extra_years)) {
     grid <- filter(grid, year %in% c(sort(unique(m$data$year))))
   } else {
     # if extra time
-    # grid <- filter(grid, year %in% c(sort(unique(m$data$year))))
     grid <- filter(grid, year %in% sort(union(m$data$year, m$extra_time)))
   }
-
 
   if (file.exists(pfn) & file.exists(i0)) {
     p <- readRDS(pfn)
@@ -672,30 +606,16 @@ fit_all_distribution_models <- function(species, only_sampled) {
       height = fig_height, width = fig_width
     )
 
-    # browser()
-
     plot_index(p, species, "Total", dens_model_name, i0) +
       ggtitle(paste0(species, ": total biomass (", dens_model_name, ")"))
 
-    # ggsave(paste0("figs/density-index-", m0, ".png"),
-    #   height = fig_height / 2, width = fig_width / 1.5
-    # )
   }
 
   if (!file.exists(i0)) {
     plot_index(p, species, "Total", dens_model_name, i0) +
       ggtitle(paste0(species, ": total biomass (", dens_model_name, ")"))
 
-    # ggsave(paste0("figs/density-index-", m0, ".png"),
-    # height = fig_height / 2, width = fig_width /1.5
-    # )
   }
-
-  # # not working with offset
-  # g <- ggeffects::ggeffect(m, paste0("log_depth [",
-  #   range(d$log_depth)[1], ":", range(d$log_depth)[2], "by=0.05]"))
-  # plot(g)
-
 
   # certain model formulation functions (like formula() and terms() ) grab the ENTIRE global environment
   # need to purge previous models before building new ones
@@ -703,7 +623,6 @@ fit_all_distribution_models <- function(species, only_sampled) {
   set_spatiotemporal <- as.list(m[["spatiotemporal"]])
   set_family <- m$family
 
-  # browser()
   rm(m, p)
 
   ## mature female model ----
@@ -721,13 +640,10 @@ fit_all_distribution_models <- function(species, only_sampled) {
 
   which_surv <- which_surveys(d2) %>%
     filter(group_name %in% c("Females", "Mature females")) %>%
-    filter(  #round(prop_pos, 2) >= 0.01 &
-             prop_pos >= 0.01 &
-             max_pos_by_year >= 3 &
-             # round(max_prop_pos, 2) >= 0.05 &
-             !(prop_years_w_0 > 0.5 & max_pos_by_year < 5)
+    filter(prop_pos >= 0.01 &
+           max_pos_by_year >= 3 &
+           !(prop_years_w_0 > 0.5 & max_pos_by_year < 5)
     )
-
 
   d2 <- filter(d2, survey_type %in% which_surv$survey_type)
 
@@ -747,9 +663,6 @@ fit_all_distribution_models <- function(species, only_sampled) {
                 dens_model_name,
                 ".png"), width = 14, height = 14)
 
-
-
-
   if (!file.exists(fmf)) {
 
     if(nrow(which_surv)<2){
@@ -762,9 +675,7 @@ fit_all_distribution_models <- function(species, only_sampled) {
                    share_range = FALSE,
                    time = "year",
                    family = set_family,
-                   # extra_time = extra_years2,
                    extra_time = sdmTMB:::find_missing_time(d2$year),
-                   # extra_time = sdmTMB:::find_missing_time(data$year),
                    priors = set_priors,
                    silent = FALSE,
                    mesh = mesh2, data = d2
@@ -779,9 +690,7 @@ fit_all_distribution_models <- function(species, only_sampled) {
     share_range = FALSE,
     time = "year",
     family = set_family,
-    # extra_time = extra_years2,
     extra_time = sdmTMB:::find_missing_time(d2$year),
-    # extra_time = sdmTMB:::find_missing_time(data$year),
     priors = set_priors,
     silent = FALSE,
     mesh = mesh2, data = d2
@@ -795,27 +704,21 @@ fit_all_distribution_models <- function(species, only_sampled) {
     saveRDS(mf, fmf)
   } else {
     mf <- readRDS(fmf)
-    # mf <- sdmTMB:::update_version(mf)
     if (!all(sanity(mf, gradient_thresh = 0.005))) {
         mf <- refine_model(mf, alternate_family = set_family2, use_priors = set_priors)
       }
     saveRDS(mf, fmf)
   }
 
-
   # TODO: add R2 once it's working for delta models
   # r2_mf <- r2.sdmTMB(mf)
-# browser()
+
   if (file.exists(pmfn) & file.exists(i1)) {
     pf <- readRDS(pmfn)
   } else {
-    # pf <- predict(mf, re_form_iid = NA,
-    #               newdata = filter(grid, year > 2001),
-    #               return_tmb_object = TRUE)
 
     pf <- predict(mf,
       re_form_iid = NA, # only needed if random intercepts
-      # newdata = filter(grid, year %in% sort(unique(mf$data$year))),
       newdata = filter(grid, year %in% sort(union(mf$data$year, mf$extra_time))),
       return_tmb_object = TRUE
     )
@@ -831,10 +734,6 @@ fit_all_distribution_models <- function(species, only_sampled) {
   if (!file.exists(i1)) {
     plot_index(pf, species, "Mature female", dens_model_name, i1) +
       ggtitle(paste0(species, ": mature female biomass (", dens_model_name, ")"))
-
-    # ggsave(paste0("figs/density-index-", m1, ".png"),
-    # height = fig_height / 2, width = fig_width / 1.5
-    # )
   }
 
   ## currently sticking with m values
@@ -847,11 +746,8 @@ fit_all_distribution_models <- function(species, only_sampled) {
 
   ## mature male model ----
 
-  # browser()
-
     d2b <- d %>%
       filter(group_name %in% c("Males", "Mature males")) %>%
-      # filter(group_name == "Mature males") %>%
       filter(year > 2001) %>%
       filter(!is.na(group_catch_est))
 
@@ -864,10 +760,8 @@ fit_all_distribution_models <- function(species, only_sampled) {
 
     which_surv <- which_surveys(d2b) %>%
       filter(group_name %in% c("Males", "Mature males")) %>%
-      filter(#round(prop_pos, 2) >= 0.01 &
-        prop_pos >= 0.01 &
+      filter(prop_pos >= 0.01 &
              max_pos_by_year >= 3 &
-               # round(max_prop_pos, 2) >= 0.05 &
              !(prop_years_w_0 > 0.5 & max_pos_by_year < 5)
       )
 
@@ -977,14 +871,13 @@ fit_all_distribution_models <- function(species, only_sampled) {
 
   ## immature model ----
 
-    # if maturity split used, but too few immatures to model
-    if(spp == "shortraker-rockfish"){
-      maturity_possible <- FALSE
-    }
+  # if maturity split used, but too few immature fish to model
+  if(spp == "shortraker-rockfish"){
+    maturity_possible <- FALSE
+  }
 
-    # browser()
 
-if(maturity_possible) {
+  if(maturity_possible) {
 
     d3 <- d %>%
       filter(group_name %in% c("Immature")) %>%
@@ -1000,10 +893,9 @@ if(maturity_possible) {
 
     which_surv <- which_surveys(d3) %>%
       filter(group_name %in% c("Immature")) %>%
-      filter(#round(prop_pos, 2) >= 0.01 &
+      filter(
         prop_pos >= 0.01 &
         max_pos_by_year >= 3 &
-        # round(max_prop_pos, 2) >= 0.05 &
         !(prop_years_w_0 > 0.5 & max_pos_by_year < 5)
       )
 
@@ -1018,11 +910,8 @@ if(maturity_possible) {
       data_obj = d3,
       catch_var = "density_kgha",
       group = "immature")
-    ggsave(paste0("figs/density-mesh-",
-                  spp,
-                  "-imm-",
-                  dens_model_name,
-                  ".png"), width = 14, height = 14)
+    ggsave(paste0("figs/density-mesh-", spp, "-imm-", dens_model_name, ".png"),
+           width = 14, height = 14)
 
 
     if (!file.exists(fmi)) {
@@ -1038,7 +927,6 @@ if(maturity_possible) {
                    family = set_family,
                    extra_time = sdmTMB:::find_missing_time(d3$year),
                    priors = set_priors,
-                   # priors = set_priors,
                    silent = FALSE,
                    mesh = mesh3, data = d3
       ))
@@ -1054,7 +942,6 @@ if(maturity_possible) {
                            family = set_family,
                            extra_time = sdmTMB:::find_missing_time(d3$year),
                            priors = set_priors,
-                           # priors = set_priors,
                            silent = FALSE,
                            mesh = mesh3, data = d3
     ))
@@ -1071,7 +958,6 @@ if(maturity_possible) {
 
   } else {
     mi <- readRDS(fmi)
-    # mi <- sdmTMB:::update_version(mi)
     if (!all(sanity(mi, gradient_thresh = 0.005))) {
         mi <- refine_model(mi, alternate_family = set_family2,
                            use_priors = set_priors)
@@ -1085,13 +971,8 @@ if(maturity_possible) {
   # r2_i <- r2.sdmTMB(mi)
 
   s <- sanity(mi, gradient_thresh = 0.005)
-  # s <- TRUE
-  # s$sigmas_ok <- TRUE # ignore small sigma issues
-  # s$all_ok <- TRUE # ignore small sigma issues
 
-  # browser()
-
-  if (all(s)) {
+  if (all(unlist(s))) {
     if (file.exists(pifn) & file.exists(i3)) {
       pi <- readRDS(pifn)
     } else {
@@ -1116,10 +997,6 @@ if(maturity_possible) {
   if (!file.exists(i3)) {
     try(plot_index(pi, species, "Immature", dens_model_name, i3) +
       ggtitle(paste0(species, ": immature biomass (", dens_model_name, ")")))
-
-    # ggsave(paste0("figs/density-index-", m3, ".png"),
-    # height = fig_height / 2, width = fig_width / 1.5
-    # )
   }
 
   ind0 <- readRDS(i0) %>% mutate(index = "Total") %>% mutate(model_string = dens_model_name0)
@@ -1127,17 +1004,8 @@ if(maturity_possible) {
   ind2 <- readRDS(i2) %>% mutate(index = "Mature male") %>% mutate(model_string = dens_model_name)
   try(ind3 <- readRDS(i3) %>% mutate(index = "Immature")%>% mutate(model_string = dens_model_name))
 
-  ## hack to correct some model_strings
-  saveRDS(ind0,i0)
-  saveRDS(ind1,i1)
-  saveRDS(ind2,i2)
-  try(saveRDS(ind3,i3))
-
   bc_inds <- bind_rows(ind0, ind1, ind2)
   try(bc_inds <- bind_rows(ind0, ind1, ind2, ind3))
-
-  # browser()
-  # bc_inds <- bc_inds %>% mutate(model_string = dens_model_name)
 
   ## Plot coastwide indices ----
   m <- readRDS(fm)
@@ -1160,7 +1028,6 @@ if(maturity_possible) {
       " (", paste(unique(m$data$survey_type), collapse = ", "), ")"
     )))
 
-  # p1
   # ggsave(paste0("figs/density-index-", spp, "-all",
   # dens_model_name, "-", knot_distance, "-km.png"),
   # height = fig_height / 2, width = fig_width / 1.5
@@ -1173,7 +1040,6 @@ if(maturity_possible) {
   )
 
   if (!file.exists(fsi)) {
-    # browser()
     mf <- readRDS(fmf)
     mm <- readRDS(fmm)
     inds0 <- split_index_by_survey(m, grid, species, "Total")
@@ -1192,7 +1058,6 @@ if(maturity_possible) {
     all_split_inds <- readRDS(fsi)
   }
 
-  # browser()
   ## Plot split indices ----
   p2 <- all_split_inds %>%
     left_join(survey_years, ., multiple = "all") %>%

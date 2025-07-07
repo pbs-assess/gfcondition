@@ -79,7 +79,8 @@ ggplot(area_xy, aes(X, Y)) +
     data = coast, aes_string(x = "X", y = "Y", group = "PID"),
     fill = "grey87", col = "grey70", lwd = 0.2
   ) +
-  xlab("Longitude") + ylab("Latitude")
+  xlab("Longitude") + ylab("Latitude") +
+  ggsidekick::theme_sleek()
 
 ggsave("figs/bccm-area.png", width = 3, height = 3)
 
