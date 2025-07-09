@@ -2,7 +2,7 @@
 library(tidyverse)
 devtools::load_all()
 
-source("stock-specific/00-set-options.R")
+# source("stock-specific/00-set-options.R")
 
 spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 
@@ -10,6 +10,7 @@ spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 dir.create(paste0("stock-specific/", spp, "/"), showWarnings = FALSE)
 dir.create(paste0("stock-specific/", spp, "/data/"), showWarnings = FALSE)
 dir.create(paste0("stock-specific/", spp, "/figs/"), showWarnings = FALSE)
+dir.create(paste0("stock-specific/", spp, "/figs-french/"), showWarnings = FALSE)
 # dir.create(paste0("stock-specific/", spp, "/models/"), showWarnings = FALSE)
 dir.create(paste0("stock-specific/", spp, "/output/"), showWarnings = FALSE)
 

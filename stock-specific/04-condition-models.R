@@ -4,7 +4,7 @@ library(sdmTMB)
 library(ggsidekick)
 devtools::load_all(".")
 
-source("stock-specific/00-set-options.R")
+# source("stock-specific/00-set-options.R")
 
 index_list <- expand.grid(maturity = c("imm",
                                        "mat"),
@@ -29,7 +29,7 @@ index_list <- bind_rows(index_list, index_list2)
 
 calc_condition_indices <- function(maturity, males, females, add_density, get_mvn_sims = TRUE) {
 
-  source("stock-specific/00-set-options.R")
+  # source("stock-specific/00-set-options.R")
   source("R/refine-condition-models.R", local = TRUE)
 
   ## internal testing options
@@ -966,7 +966,8 @@ calc_condition_indices <- function(maturity, males, females, add_density, get_mv
          # subtitle = paste("conditional R2:", r2$r2[1], "marginal R2:", r2$r2[2])
          )
 
-  ggsave(paste0("stock-specific/", spp, "/figs/condition-index-", spp, "-",
+  ggsave(paste0("stock-specific/", spp, "/figs",
+                "/condition-index-", spp, "-",
                 group_tag, "-", model_name, "-", knot_distance, "-km.png"),
     height = fig_height / 2, width = fig_width / 2
   )
@@ -1044,7 +1045,8 @@ calc_condition_indices <- function(maturity, males, females, add_density, get_mv
     ylab("Predicted average condition factor") +
     labs(title = paste0(species, ": ", group_label, " ", "-", model_name))
 
-  ggsave(paste0("stock-specific/", spp, "/figs/condition-index-", spp, "-split-",
+  ggsave(paste0("stock-specific/", spp, "/figs",
+                "/condition-index-", spp, "-split-",
                 group_tag, "-", model_name, "-", knot_distance, "-km.png"),
          height = fig_height / 2, width = fig_width/1.5
   )

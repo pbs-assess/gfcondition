@@ -1,10 +1,11 @@
 # Set options for a single species analysis
 
 # Species ----
-species <- "Lingcod"
+# species <- "Lingcod"
 # species <- "Pacific Halibut"
 # species <- "Dover Sole"
 # species <- "Pacific Cod"
+species <- "Yelloweye Rockfish"
 
 # 1. Data retrieval and filtering options ----
 
@@ -28,13 +29,21 @@ tidy_surveys_included <- c("HBLL OUT N", "HBLL OUT S",
                       "OTHER", # filtered with other_surveys_kept
                       "HS MSA", "SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI")
 
+if (species == "Yelloweye Rockfish") {
+  other_surveys_kept <- c(5, # PCOD
+                          9, # Rockfish survey pre 2000?
+                          11, # THORNYHEAD
+                          79, # Triennial
+                          68 # HAKE
+  )
+}else{
 other_surveys_kept <- c(5, # PCOD
                         9, # Rockfish survey pre 2000?
                         11, # THORNYHEAD
                         # 79, # Triennial
                         68 # HAKE
                         )
-
+}
 ## Notes on SABLE:
 ## at different time of year than all the others and only has weights for certain species
 ## retained for length at maturity calculation, but removed from condition analysis
@@ -97,9 +106,13 @@ dens_model_total <- "dln-2024-11" # this is for total
 dens_model_name1 <- "dln-split-2024-11" # these are `all catches' models
 dens_model_name2 <- "dln-only-sampled-2024-11" # these are `sampled catches' models
 } else {
-dens_model_total <- "dln-2024-12" # this is for total
-dens_model_name1 <- "dln-split-2024-12" # these are `all catches' models
-dens_model_name2 <- "dln-only-sampled-2024-12" # these are `sampled catches' models
+# dens_model_total <- "dln-2024-12" # this is for total
+# dens_model_name1 <- "dln-split-2024-12" # these are `all catches' models
+# dens_model_name2 <- "dln-only-sampled-2024-12" # these are `sampled catches' models
+
+dens_model_total <- "dln-2025-05" # this is for total
+dens_model_name1 <- "dln-split-2025-05" # these are `all catches' models
+dens_model_name2 <- "dln-only-sampled-2025-05" # these are `sampled catches' models
 }
 
 ## should we exclude samples from years with fewer than some threshold?
@@ -201,3 +214,32 @@ if (species == "Shortraker Rockfish") {
 # # sample_id_re <- FALSE
 # # # fish <- filter(fish, maturity_code != 7 | is.na(maturity_code))
 # # }
+
+## NEW APPROACH TO RUNNING CODE
+### get density estimates and/or update biomass maps
+# update_models <- TRUE # adds current year and month to model names
+## OR
+update_models <- FALSE
+model_date <- "2024-11" # use previous model from this data
+source("stock-specific/02-sdm.R")
+
+FRENCH <- TRUE
+source("stock-specific/02-sdm.R")
+
+### get condition factors (figures not translated/used in MS)
+source("stock-specific/03-condition-calc.R")
+
+### condition models (figures not translated/used in MS)
+source("stock-specific/04-condition-models.R")
+
+### condition indices
+source("stock-specific/05-combine-condition-indices.R")
+
+### condition maps
+source("stock-specific/06-plot-condition-maps.R")
+
+## options for reloading packages without restarting R
+# detach("package:gfcondition, unload=TRUE)
+# detach("package:gfplot", unload=TRUE)
+# detach("package:rosettafish", unload=TRUE)
+

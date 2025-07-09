@@ -6,7 +6,7 @@ library(tidyverse)
 library(gfplot)
 devtools::load_all()
 
-source("stock-specific/00-set-options.R")
+# source("stock-specific/00-set-options.R")
 
 update_m <- FALSE # uses maturity from split_catch_by_sex function run in 01-prep-data
 
@@ -498,8 +498,10 @@ ggplot(dat |> mutate(weight = weight/1000) |> filter(
                  #, " (trimmed at ", lower_quantile, " and ", upper_quantile, " quantiles)"
                  )) +
   ggsidekick::theme_sleek() + theme(legend.position = c(0.2,0.8))
-# browser()
-ggsave(paste0("stock-specific/", spp, "/figs/cond-black-swan-",
+
+browser()
+ggsave(paste0("stock-specific/", spp, "/figs", #if(FRENCH){"-french"},
+              "/cond-black-swan-",
               ifelse(is_heavy_tail, "t", "norm"),
               "-", sd_threshold, "sd-",
               "year-",
@@ -529,7 +531,8 @@ ggplot(dat |> mutate(weight = weight/1000) |> filter(
   # facet_wrap(~sex) +
   ggsidekick::theme_sleek() + theme(legend.position = c(0.2,0.8))
 
-ggsave(paste0("stock-specific/", spp, "/figs/cond-black-swan-",
+ggsave(paste0("stock-specific/", spp, "/figs", #if(FRENCH){"-french"},
+              "/cond-black-swan-",
               ifelse(is_heavy_tail, "t", "norm"),
               "-", sd_threshold, "sd-",
               spp, ".png"), width = 10, height = 6)

@@ -10,7 +10,7 @@ devtools::load_all(".")
 set_legend_position <- c(0.4,0.9)
 
 
-source("stock-specific/00-set-options.R")
+# source("stock-specific/00-set-options.R")
 spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 
 theme_set(ggsidekick:::theme_sleek()+
@@ -69,12 +69,17 @@ fig_height <- 4
 fig_width <- 6
 
 g1 <- d1 |> bind_rows(d2)  |>
-  ggplot( aes(year, est, fill = group)) +
+  mutate(
+    group = rosettafish::en2fr(group, FRENCH),
+    model = rosettafish::en2fr(model, FRENCH)
+  ) |>
+  ggplot(aes(year, est, fill = group)) +
   geom_hline(yintercept = 1,
              # linetype = "dotted",
              colour = "grey") +
   geom_line(aes(colour = group, linetype = model)) +
-  geom_ribbon(data = d1,
+  geom_ribbon(data = d1 |> mutate(group = rosettafish::en2fr(group, FRENCH),
+                                  model = rosettafish::en2fr(model, FRENCH)),
               aes(ymin = lwr, ymax = upr, alpha = group)) +
   # scale_y_log10() +
   # facet_wrap(~species,
@@ -99,13 +104,14 @@ g1 <- d1 |> bind_rows(d2)  |>
     ) +
   labs(
     x = "",
-    y = "Condition index",
+    y = rosettafish::en2fr("Condition index", FRENCH),
     alpha = "",
     fill = "",
     colour = "",
     linetype = "")
 
-ggsave(paste0("stock-specific/", spp, "/figs/",
+ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+              "/",
               spp, "-all-condition-indices-",
               model_name2,
               ".png"),
@@ -113,15 +119,23 @@ ggsave(paste0("stock-specific/", spp, "/figs/",
        width = fig_width
 )
 
+# browser()
+
 (gl <- d1 |> bind_rows(d2)  |>
+    mutate(
+      group = rosettafish::en2fr(group, FRENCH),
+      model = rosettafish::en2fr(model, FRENCH)
+    ) |>
   ggplot( aes(year, log_est, fill = group)) +
   geom_hline(yintercept = 0,
              # linetype = "dotted",
              colour = "grey") +
   geom_line(aes(colour = group, linetype = model)) +
-  # geom_ribbon(data = d1,
+  # geom_ribbon(data = d1 |> mutate(group = rosettafish::en2fr(group, FRENCH),
+  #             model = rosettafish::en2fr(model, FRENCH)),
   #             aes(ymin = lwr, ymax = upr, alpha = group)) +
-  geom_ribbon(data = d1,
+  geom_ribbon(data = d1 |> mutate(group = rosettafish::en2fr(group, FRENCH),
+                                  model = rosettafish::en2fr(model, FRENCH)),
               aes(ymin = log(lwr), ymax = log(upr), alpha = group)) +
   # scale_y_log10() +
   # facet_wrap(~species,
@@ -146,13 +160,15 @@ ggsave(paste0("stock-specific/", spp, "/figs/",
   ) +
   labs(
     x = "",
-    y = "Condition index (log scale)",
+    y = rosettafish::en2fr("Condition index (log scale)", FRENCH),
+    # y = "Condition index (log scale)",
     alpha = "",
     fill = "",
     colour = "",
     linetype = ""))
 
-ggsave(paste0("stock-specific/", spp, "/figs/",
+ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+              "/",
               spp, "-log-condition-indices-",
               model_name2,
               ".png"),
@@ -198,12 +214,17 @@ max_est <- quantile(c(d1$upr, d2$upr, d3$upr, d4$upr), 0.975)
 # d4 <- d4 |> mutate(upr_trimmed = ifelse(upr > max_est, max_est, upr))
 
 g2 <- d3 |> bind_rows(d4)  |>
+  mutate(
+    group = rosettafish::en2fr(group, FRENCH),
+    model = rosettafish::en2fr(model, FRENCH)
+  ) |>
   ggplot( aes(year, est, fill = group)) +
   geom_hline(yintercept = 1,
              # linetype = "dotted",
              colour = "grey") +
   geom_line(aes(colour = group, linetype = model)) +
-  geom_ribbon(data = d3,
+  geom_ribbon(data = d3 |> mutate(group = rosettafish::en2fr(group, FRENCH),
+                                  model = rosettafish::en2fr(model, FRENCH)),
               aes(ymin = lwr, ymax = upr, alpha = group)) +
   # scale_y_log10() +
   facet_grid(region~group) +
@@ -223,13 +244,14 @@ g2 <- d3 |> bind_rows(d4)  |>
   ) +
   labs(
     x = "",
-    y = "Condition index",
+    y = rosettafish::en2fr("Condition index", FRENCH),
     alpha = "",
     fill = "",
     colour = "",
     linetype = "")
 
-ggsave(paste0("stock-specific/", spp, "/figs/",
+ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+              "/",
               spp, "-all-condition-indices-split-",
               model_name2,
               ".png"),
@@ -238,10 +260,11 @@ ggsave(paste0("stock-specific/", spp, "/figs/",
 )
 
 
-(g1 + ggtitle("A. Coastwide")) / (g2+ggtitle("B. Split by survey area")) + plot_layout(heights = c(0.6,1))
+(g1 + ggtitle(if(FRENCH){"A. Partout sur la côte (stock entier)"}else{"A. Coastwide (entire stock)"})) / (g2+ggtitle(if(FRENCH){"B. Séparé par zone d'enquête"}else{"B. Split by survey area"})) + plot_layout(heights = c(0.6,1))
 
 
-ggsave(paste0("stock-specific/", spp, "/figs/",
+ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+              "/",
               spp, "-all-condition-indices-w-split-",
               model_name2,
               ".png"),
