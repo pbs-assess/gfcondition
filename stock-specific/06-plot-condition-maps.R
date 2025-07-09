@@ -2,7 +2,7 @@
 library(tidyverse)
 devtools::load_all(".")
 
-source("stock-specific/00-set-options.R")
+# source("stock-specific/00-set-options.R")
 spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 
 model_names <- list.files(paste0("stock-specific/", spp, "/output/cond-pred"),
@@ -75,7 +75,9 @@ for (j in seq_along(pred_files)){
 
   g <- plot_predictions(p2, model_dat,
                         fill_column = "cond_trim",
-                        fill_label = "Condition \nfactor",
+                        fill_label = if(FRENCH){"Facteur \nd'état \ncorporel"
+                          }else{
+                            "Condition \nfactor"},
                         fill_scale =
                           ggplot2::scale_fill_viridis_c(),
                         bounds = p1,
@@ -83,21 +85,32 @@ for (j in seq_along(pred_files)){
                         show_raw_data = FALSE
   )
 
-  g <- g + facet_wrap(~year, ncol = 8) +
-    ggtitle(paste0(species, ": ", unique(m$data$group_name), " ", model_name[i]))
+  g <- g +
+    # ggtitle(paste0(species, ": ",
+    #                rosettafish::en2fr(unique(m$data$group_name), FRENCH),
+    #                " ", model_name[i])) +
+    facet_wrap(~year, ncol = 8)
 
-  dir.create(paste0("stock-specific/", spp, "/figs/cond-", model_name[i], ""),
+  # browser()
+
+  dir.create(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+                    "/cond-", model_name[i], ""),
              showWarnings = FALSE)
-  ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name[i], "/condition-pred-wide-", spp, "-", unique(m$data$group_name), "-",
+  ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+                "/cond-", model_name[i], "/condition-pred-wide-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
          height = 8, width = 8
   )
 
+  g <- g +
+    # ggtitle(paste0(species, ": ",
+    #                rosettafish::en2fr(unique(m$data$group_name), FRENCH),
+    #                " ", model_name[i])) +
+    facet_wrap(~year, ncol = 12)
 
-  g <- g + facet_wrap(~year, ncol = 12) +
-    ggtitle(paste0(species, ": ", unique(m$data$group_name), " ", model_name[i]))
-
-  ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name[i], "/condition-pred-wide-", spp, "-", unique(m$data$group_name), "-",
+  ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+                "/cond-", model_name[i],
+                "/condition-pred-wide-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
          height = 6, width = 11
   )
@@ -106,9 +119,13 @@ for (j in seq_along(pred_files)){
   g <- plot_predictions(p2, model_dat, # extrapolate_depth = FALSE,
                         # fill_column = "log_cond",
                         fill_column = "cond_trim",
-                        fill_label = "Condition \nfactor",
+                        fill_label = if(FRENCH){"Facteur \nd'état \ncorporel"
+                        }else{
+                          "Condition \nfactor"},
                         pt_column = "count",
-                        pt_label = "Fish \nsampled",
+                        pt_label = if(FRENCH){"Poisson \néchantillonné"
+                        }else{
+                          "Fish \nsampled"},
                         pt_size_range = c(0.5, 4),
                         pos_pt_fill = NA,
                         bin_pt_col = "black",
@@ -127,18 +144,24 @@ for (j in seq_along(pred_files)){
   if(FALSE){
   # if you want title
   g <- g +
-    ggtitle(paste0(species, ": ", unique(m$data$group_name), " ", model_name[i]))
+    ggtitle(paste0(species, ": ", rosettafish::en2fr(unique(m$data$group_name), FRENCH),
+                   " ", model_name[i]))
   }
 
-  ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name[i], "/condition-map-", spp, "-", unique(m$data$group_name), "-",
+  ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+                "/cond-", model_name[i],
+                "/condition-map-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
          height = 8, width = 8
   )
 
   g <- g + facet_wrap(~year, ncol = 12) +
-    ggtitle(paste0(species, ": ", unique(m$data$group_name), " ", model_name[i]))
+    ggtitle(paste0(species, ": ", rosettafish::en2fr(unique(m$data$group_name), FRENCH),
+                   " ", model_name[i]))
 
-  ggsave(paste0("stock-specific/", spp, "/figs/cond-", model_name[i], "/condition-map-wide-", spp, "-", unique(m$data$group_name), "-",
+  ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+                "/cond-", model_name[i],
+                "/condition-map-wide-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
          height = 6, width = 11
   )

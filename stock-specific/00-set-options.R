@@ -2,10 +2,8 @@
 
 # Species ----
 # species <- "Lingcod"
-# species <- "Pacific Halibut"
-# species <- "Dover Sole"
-# species <- "Pacific Cod"
-species <- "Yelloweye Rockfish"
+species <- "Dover Sole"
+# species <- "Yelloweye Rockfish"
 
 # 1. Data retrieval and filtering options ----
 
@@ -29,21 +27,14 @@ tidy_surveys_included <- c("HBLL OUT N", "HBLL OUT S",
                       "OTHER", # filtered with other_surveys_kept
                       "HS MSA", "SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI")
 
-if (species == "Yelloweye Rockfish") {
-  other_surveys_kept <- c(5, # PCOD
-                          9, # Rockfish survey pre 2000?
-                          11, # THORNYHEAD
-                          79, # Triennial
-                          68 # HAKE
-  )
-}else{
+
 other_surveys_kept <- c(5, # PCOD
                         9, # Rockfish survey pre 2000?
                         11, # THORNYHEAD
-                        # 79, # Triennial
+                        79, # Triennial
                         68 # HAKE
                         )
-}
+
 ## Notes on SABLE:
 ## at different time of year than all the others and only has weights for certain species
 ## retained for length at maturity calculation, but removed from condition analysis
@@ -90,6 +81,13 @@ only_synoptic <- FALSE
 
 if(only_synoptic) dens_model_name_long <- "depth and DOY"
 
+
+# ## or use only longline data for all density models? ----
+# only_longline <- FALSE
+# # only_longline <- TRUE
+# if(only_longline) dens_model_name_long <- "depth, DOY, and survey type"
+
+
 # 3. Condition model settings ----
 
 # this applies only to units of log_a and b
@@ -99,21 +97,6 @@ set_weight_scale <- 1 # in g
 # option to add prefix to models otherwise named with "year-month"
 cond_model_prefix <- ""
 
-## review x-plot-sdm-effects.R figs before choosing which models to use here
-
-if(species == "Lingcod") {
-dens_model_total <- "dln-2024-11" # this is for total
-dens_model_name1 <- "dln-split-2024-11" # these are `all catches' models
-dens_model_name2 <- "dln-only-sampled-2024-11" # these are `sampled catches' models
-} else {
-# dens_model_total <- "dln-2024-12" # this is for total
-# dens_model_name1 <- "dln-split-2024-12" # these are `all catches' models
-# dens_model_name2 <- "dln-only-sampled-2024-12" # these are `sampled catches' models
-
-dens_model_total <- "dln-2025-05" # this is for total
-dens_model_name1 <- "dln-split-2025-05" # these are `all catches' models
-dens_model_name2 <- "dln-only-sampled-2025-05" # these are `sampled catches' models
-}
 
 ## should we exclude samples from years with fewer than some threshold?
 # min_yr_count <- 10 # current main folder, hasn't been run with density yet
@@ -219,12 +202,24 @@ if (species == "Shortraker Rockfish") {
 ### get density estimates and/or update biomass maps
 # update_models <- TRUE # adds current year and month to model names
 ## OR
-update_models <- FALSE
-model_date <- "2024-11" # use previous model from this data
+# update_models <- FALSE
+# model_date <- "2024-11" # use previous model from this data
+
+FRENCH <- FALSE
+# FRENCH <- TRUE
+
 source("stock-specific/02-sdm.R")
 
-FRENCH <- TRUE
-source("stock-specific/02-sdm.R")
+## review x-plot-sdm-effects.R figs before choosing which models to use here
+if(update_models) {
+  dens_model_total <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
+  dens_model_name1 <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
+  dens_model_name2 <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
+} else {
+  dens_model_total <- paste0(dens_model_name0, model_date)
+  dens_model_name1 <- paste0(dens_model_name0, "split-", model_date)
+  dens_model_name2 <- paste0(dens_model_name0, "only-sampled-", model_date)
+}
 
 ### get condition factors (figures not translated/used in MS)
 source("stock-specific/03-condition-calc.R")
@@ -237,6 +232,11 @@ source("stock-specific/05-combine-condition-indices.R")
 
 ### condition maps
 source("stock-specific/06-plot-condition-maps.R")
+
+### maturity, le crens and density index figures
+### could produce complete flow chart figures with a little updating
+source("stock-specific/07-figs-from-flow-chart.R")
+
 
 ## options for reloading packages without restarting R
 # detach("package:gfcondition, unload=TRUE)

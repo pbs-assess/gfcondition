@@ -260,7 +260,7 @@ ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 )
 
 
-(g1 + ggtitle(if(FRENCH){"A. Partout sur la côte (stock entier)"}else{"A. Coastwide (entire stock)"})) / (g2+ggtitle(if(FRENCH){"B. Séparé par zone d'enquête"}else{"B. Split by survey area"})) + plot_layout(heights = c(0.6,1))
+(g1 + ggtitle(if(FRENCH){"A. Partout sur la côte (stock entier)"}else{"A. Coastwide (entire stock)"})) / (g2+ggtitle(if(FRENCH){"B. Fractionnés par zone d'enquête"}else{"B. Split by survey area"})) + plot_layout(heights = c(0.6,1))
 
 
 ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
