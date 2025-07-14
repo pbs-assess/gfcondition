@@ -619,7 +619,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     theme(legend.position="right")
 
   .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-                "/density-map-", m1, ".png"),
+                "/C-02-density-map-", m1, ".png"),
          height = fig_height, width = fig_width
   )
 
@@ -761,7 +761,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     theme(legend.position="right")
 
   ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-                "/density-map-", m2, ".png"),
+                "/C-03-density-map-", m2, ".png"),
          height = fig_height, width = fig_width
   )
 
@@ -922,7 +922,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
           theme(legend.position="right")
 
         ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-                      "/density-map-", m3, ".png"),
+                      "/C-04-density-map-", m3, ".png"),
                height = fig_height, width = fig_width
         )
       }

@@ -106,7 +106,7 @@ mat$maturity_plot +
 # options(op)
 
 .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-              "/02-maturity.png"),
+              "/C-01-maturity.png"),
        height = 3, width = 5
 )
 
@@ -174,7 +174,7 @@ ggplot(
     )
 
 .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-              "/03-le-crens.png"),
+              "/C-06-le-crens.png"),
        height = 3.5, width = 5.5
 )
 
@@ -281,7 +281,7 @@ ds$group <- "Sum of split indices"
       y=rosettafish::en2fr("Relative biomass", FRENCH)))
 
 .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-              "/05-density-indices.png"),
+              "/C-05-density-indices.png"),
        height = 3, width = 5
 )
 
@@ -346,7 +346,7 @@ ds$group <- "Sum of split indices"
       y=rosettafish::en2fr("Relative biomass", FRENCH)))
 
 .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-              "/05-density-indices-only-sampled.png"),
+              "/C-05-density-indices-only-sampled.png"),
        height = 3, width = 5
 )
 

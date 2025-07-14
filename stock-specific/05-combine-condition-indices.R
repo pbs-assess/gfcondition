@@ -264,7 +264,7 @@ g2 <- d3 |> bind_rows(d4)  |>
 
 
 .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-              "/",
+              "/C-00-",
               spp, "-all-condition-indices-w-split-",
               model_name2,
               ".png"),

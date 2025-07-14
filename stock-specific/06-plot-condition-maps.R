@@ -149,8 +149,8 @@ for (j in seq_along(pred_files)){
   }
 
   .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-                "/cond-", model_name[i],
-                "/condition-map-", spp, "-", unique(m$data$group_name), "-",
+                # "/cond-", model_name[i],
+                "/C-07-09-condition-map-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
          height = 8, width = 8
   )
