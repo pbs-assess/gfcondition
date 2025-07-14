@@ -166,6 +166,7 @@ meaneffort1 <- dset %>%
     # convert mouth widths to doorspread for hake data only, not needed for series means
     mouth_width_m = ifelse(mouth_width_m == 0, NA_real_, mouth_width_m),
     doorspread_m = ifelse(survey_series_id == 68 & is.na(doorspread_m), mouth_width_m * 0.74 + 40, doorspread_m),
+    doorspread_m = ifelse(survey_series_id == 79 & is.na(doorspread_m), mouth_width_m * 2, doorspread_m), # average conversion according to chatGPT, not critical due to catchability factor
     speed_mpm = ifelse(speed_mpm == 0, NA_real_, speed_mpm)
   ) %>%
   group_by(year, survey_id, survey_series_id) %>%
