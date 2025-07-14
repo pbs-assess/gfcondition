@@ -2,3 +2,13 @@
 .Rhistory
 .RData
 .Ruserdata
+
+
+*.rdata
+*.rds
+*.png
+
+# Stock-specific outputs
+stock-specific/*/figs/
+stock-specific/*/data/
+stock-specific/*/output/
