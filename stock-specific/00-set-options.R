@@ -51,8 +51,11 @@ set_utm_crs <- 32609
 
 dens_model_name_long <- "depth, DOY, and survey type"
 
+
+## if running alternatives can review x-plot-sdm-effects.R figs and model AICs to help choose which models to use
 set_family <- sdmTMB::delta_lognormal() # lower AIC for lingcod
 dens_model_name0 <- "dln-"
+
 
 # set_family <- sdmTMB::delta_gamma()
 # dens_model_name0 <- "dg-"
@@ -68,6 +71,7 @@ sdm_surveys_included <- c(
   "HS MSA",
   "HS PCOD",
   "THORNYHEAD",
+  "TRIENNIAL",
   "SYN HS", "SYN QCS",
   "SYN WCHG", "SYN WCVI",
   "MSSM QCS", "MSSM WCVI", # already filtered to avoid duplication
@@ -199,32 +203,36 @@ if (species == "Shortraker Rockfish") {
 # # }
 
 ## NEW APPROACH TO RUNNING CODE
-### get density estimates and/or update biomass maps
-# update_models <- TRUE # adds current year and month to model names
+update_models <- TRUE # adds current year and month to density model names
 ## OR
 # update_models <- FALSE
 # model_date <- "2024-11" # use previous model from this data
 
-FRENCH <- FALSE
-# FRENCH <- TRUE
-
-source("stock-specific/02-sdm.R")
-
-## review x-plot-sdm-effects.R figs before choosing which models to use here
 if(update_models) {
+  sysdate <- unlist(strsplit(as.character(Sys.Date()), "-"))
   dens_model_total <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
-  dens_model_name1 <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
-  dens_model_name2 <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
+  dens_model_name1 <- paste0(dens_model_name0, "split-", sysdate[1], "-", sysdate[2], "")
+  dens_model_name2 <- paste0(dens_model_name0, "only-sampled-", sysdate[1], "-", sysdate[2], "")
 } else {
   dens_model_total <- paste0(dens_model_name0, model_date)
   dens_model_name1 <- paste0(dens_model_name0, "split-", model_date)
   dens_model_name2 <- paste0(dens_model_name0, "only-sampled-", model_date)
 }
 
+FRENCH <- FALSE
+
+source("stock-specific/01-prep-data.R")
+
+### get density estimates and/or update biomass maps
+source("stock-specific/02-sdm.R")
+
 ### get condition factors (figures not translated/used in MS)
 source("stock-specific/03-condition-calc.R")
 
+
+
 ### condition models (figures not translated/used in MS)
+##needed to restart before running due to m object getting retained in global environ
 source("stock-specific/04-condition-models.R")
 
 ### condition indices
@@ -237,6 +245,20 @@ source("stock-specific/06-plot-condition-maps.R")
 ### could produce complete flow chart figures with a little updating
 source("stock-specific/07-figs-from-flow-chart.R")
 
+
+FRENCH <- TRUE
+
+# op <- options()
+
+source("stock-specific/02-sdm.R")
+### condition indices
+source("stock-specific/05-combine-condition-indices.R")
+
+### condition maps
+source("stock-specific/06-plot-condition-maps.R")
+
+### maturity, le crens and density index figures
+source("stock-specific/07-figs-from-flow-chart.R")
 
 ## options for reloading packages without restarting R
 # detach("package:gfcondition, unload=TRUE)
