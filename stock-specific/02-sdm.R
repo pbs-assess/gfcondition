@@ -145,7 +145,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     scale_y_discrete(limits = rev) +
     facet_grid(~survey_type, scales = "free") +
     theme(axis.title.y = element_blank())
-  ggsave(paste0("stock-specific/", spp, "/figs",
+  .ggsave(paste0("stock-specific/", spp, "/figs",
                 #if(FRENCH){"-french"}, # not currently used or translated
                 "/all-usabilities-", spp, ".png"),
          width = 17, height = 3.5)
@@ -317,7 +317,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     # data_obj = filter(d1, survey_type %in% c("MSSM<=05", "MSSM>05")), # for inspection
     catch_var = "density_kgha")
 
-  ggsave(paste0("stock-specific/", spp, "/figs",
+  .ggsave(paste0("stock-specific/", spp, "/figs",
                 # if(FRENCH){"-french"}, # not currently used or translated
                 "/density-mesh-",
                 spp,
@@ -331,7 +331,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     catch_var = "n_fish_sampled"
   )
 
-  ggsave(paste0(
+  .ggsave(paste0(
     "stock-specific/", spp, "/figs",
     # if(FRENCH){"-french"},# not currently used or translated
     "/n-fish-mesh-",
@@ -440,7 +440,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     plot_index(p, species, "Total", dens_model_name, i0) +
       ggtitle(paste0(species, ": total biomass (", dens_model_name, ")"))
 
-    # ggsave(paste0("stock-specific/", spp, "/figs/density-index-", m0, ".png"),
+    # .ggsave(paste0("stock-specific/", spp, "/figs/density-index-", m0, ".png"),
     #   height = fig_height / 2, width = fig_width / 1.5
     # )
   }
@@ -458,7 +458,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
          colour = guide_colorbar(barheight = 12)) +
   theme(legend.position="right")
 
-  ggsave(paste0("stock-specific/", spp, "/figs",
+  .ggsave(paste0("stock-specific/", spp, "/figs",
                 if(FRENCH){"-french"},
                 "/density-map-", m0, ".png"),
          height = fig_height, width = fig_width
@@ -469,7 +469,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     plot_index(p, species, "Total", dens_model_name, i0) +
       ggtitle(paste0(species, ": total biomass (", dens_model_name, ")"))
 
-    # ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+    # .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
     # "/density-index-", m0, ".png"),
     # height = fig_height / 2, width = fig_width /1.5
     # )
@@ -525,7 +525,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     catch_var = "density_kgha",
     group = "mature females")
 
-  ggsave(paste0("stock-specific/", spp, "/figs", #if(FRENCH){"-french"},
+  .ggsave(paste0("stock-specific/", spp, "/figs", #if(FRENCH){"-french"},
                 "/density-mesh-",
                 spp,
                 "-mat-fem-",
@@ -618,7 +618,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
            colour = guide_colorbar(barheight = 12)) +
     theme(legend.position="right")
 
-  ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+  .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
                 "/density-map-", m1, ".png"),
          height = fig_height, width = fig_width
   )

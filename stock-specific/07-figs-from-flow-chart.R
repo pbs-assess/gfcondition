@@ -32,8 +32,6 @@ dir.create(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 dens_model_total
 dens_model_name1
 
-
-
 m <- paste0(spp, "-total-", dens_model_total, "-", knot_distance, "-km")
 pfn <- paste0("stock-specific/", spp, "/output/", "density-predictions/p-", m, ".rds")
 
@@ -77,12 +75,12 @@ pfn <- paste0("stock-specific/", spp, "/output/", "density-predictions/p-", m, "
 #   panel.spacing.x = unit(0.1, "lines"))
 # # g
 #
-# ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+# .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #               "/flow-chart/01-total-dens-4yrs.png"),
 #        height = 1.5, width = 4
 # )
 
-# ggsave(paste0("stock-specific/", spp, "/figs/total-dens-4yrs.png"),
+# .ggsave(paste0("stock-specific/", spp, "/figs/total-dens-4yrs.png"),
 #        height = 2.5, width = 8
 # )
 
@@ -92,6 +90,10 @@ pfn <- paste0("stock-specific/", spp, "/output/", "density-predictions/p-", m, "
 mat <- readRDS(paste0("stock-specific/", spp, "/output/split-catch-data-", spp, ".rds"))
 # mat$maturity_plot$layers[[4]] <- NULL
 
+
+# op <- options()
+# if (exists("FRENCH")){if (FRENCH) options(OutDec = ",")}
+# browser()
 mat$maturity_plot +
   labs(
     x = rosettafish::en2fr("Length (cm)", FRENCH),
@@ -101,14 +103,15 @@ mat$maturity_plot +
   ) + theme(
   legend.position = "inside", legend.position.inside = c(0.8, 0.5),
   plot.title = element_blank())
+# options(op)
 
-ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+.ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
               "/02-maturity.png"),
        height = 3, width = 5
 )
 
 ## will need resizing for actual flow chart
-# ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+# .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #               "/flow-chart/02-maturity.png"),
 #        height = 3, width = 5
 # )
@@ -170,13 +173,13 @@ ggplot(
     legend.position = c(0.13,0.65)
     )
 
-ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+.ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
               "/03-le-crens.png"),
        height = 3.5, width = 5.5
 )
 
 # ## will need resizing for actual flow chart
-# ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+# .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #               "/flow-chart/03-le-crens.png"),
 #        height = 3.5, width = 5.5
 # )
@@ -217,7 +220,7 @@ ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #   legend.position = "none")
 # # g
 #
-# ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+# .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #               "/flow-chart/04-split-dens.png"),
 #        height = 1.9, width = 4
 # )
@@ -277,13 +280,13 @@ ds$group <- "Sum of split indices"
       x=rosettafish::en2fr("Year", FRENCH),
       y=rosettafish::en2fr("Relative biomass", FRENCH)))
 
-ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+.ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
               "/05-density-indices.png"),
        height = 3, width = 5
 )
 
 # ## will need resizing for actual flow chart
-# ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+# .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #               "/flow-chart/05-density-indices.png"),
 #        height = 3, width = 5
 # )
@@ -342,13 +345,14 @@ ds$group <- "Sum of split indices"
       x=rosettafish::en2fr("Year", FRENCH),
       y=rosettafish::en2fr("Relative biomass", FRENCH)))
 
-ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+.ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
               "/05-density-indices-only-sampled.png"),
        height = 3, width = 5
 )
 
+
 # # ## for actual flow chart
-# ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+# .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #               "/flow-chart/05-density-indices-only-sampled.png"),
 #        height = 2.7, width = 4.6
 # )
@@ -401,7 +405,7 @@ ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #   )
 # g
 #
-# ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+# .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #               "/flow-chart/06-condition-maps.png"),
 #        height = 1.9, width = 4
 # )
@@ -442,7 +446,7 @@ ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #     y = rosettafish::en2fr("Condition index", FRENCH))
 # g
 #
-# ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+# .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 #               "/flow-chart/07-condition-indices.png"),
 #        height = 1.6, width = 4.5
 # )

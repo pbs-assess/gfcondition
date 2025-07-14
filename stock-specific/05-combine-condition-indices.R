@@ -110,7 +110,7 @@ g1 <- d1 |> bind_rows(d2)  |>
     colour = "",
     linetype = "")
 
-ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+.ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
               "/",
               spp, "-all-condition-indices-",
               model_name2,
@@ -167,7 +167,7 @@ ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
     colour = "",
     linetype = ""))
 
-ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+.ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
               "/",
               spp, "-log-condition-indices-",
               model_name2,
@@ -250,7 +250,7 @@ g2 <- d3 |> bind_rows(d4)  |>
     colour = "",
     linetype = "")
 
-ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+.ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
               "/",
               spp, "-all-condition-indices-split-",
               model_name2,
@@ -263,7 +263,7 @@ ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
 (g1 + ggtitle(if(FRENCH){"A. Partout sur la côte (stock entier)"}else{"A. Coastwide (entire stock)"})) / (g2+ggtitle(if(FRENCH){"B. Fractionnés par zone d'enquête"}else{"B. Split by survey area"})) + plot_layout(heights = c(0.6,1))
 
 
-ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+.ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
               "/",
               spp, "-all-condition-indices-w-split-",
               model_name2,

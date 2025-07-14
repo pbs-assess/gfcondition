@@ -96,7 +96,7 @@ for (j in seq_along(pred_files)){
   dir.create(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
                     "/cond-", model_name[i], ""),
              showWarnings = FALSE)
-  ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+  .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
                 "/cond-", model_name[i], "/condition-pred-wide-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
          height = 8, width = 8
@@ -108,7 +108,7 @@ for (j in seq_along(pred_files)){
     #                " ", model_name[i])) +
     facet_wrap(~year, ncol = 12)
 
-  ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+  .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
                 "/cond-", model_name[i],
                 "/condition-pred-wide-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
@@ -148,7 +148,7 @@ for (j in seq_along(pred_files)){
                    " ", model_name[i]))
   }
 
-  ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+  .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
                 "/cond-", model_name[i],
                 "/condition-map-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
@@ -159,7 +159,7 @@ for (j in seq_along(pred_files)){
     ggtitle(paste0(species, ": ", rosettafish::en2fr(unique(m$data$group_name), FRENCH),
                    " ", model_name[i]))
 
-  ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+  .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
                 "/cond-", model_name[i],
                 "/condition-map-wide-", spp, "-", unique(m$data$group_name), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
@@ -174,7 +174,7 @@ for (j in seq_along(pred_files)){
   #   scale_fill_viridis_c() +
   #   scale_colour_viridis_c()
   #
-  ## ggsave(paste0("stock-specific/", spp, "/figs/density-map-", spp, "-", group_tag, "-", model_name,
+  ## .ggsave(paste0("stock-specific/", spp, "/figs/density-map-", spp, "-", group_tag, "-", model_name,
   #   "-", knot_distance, "-km.png"), height = fig_height, width = fig_width)
   # ggplot(p2, aes(X, Y,
   #                colour = omega_s,
@@ -184,7 +184,7 @@ for (j in seq_along(pred_files)){
   #   scale_fill_gradient2() +
   #   scale_colour_gradient2()
   #
-  ## ggsave(paste0("stock-specific/", spp, "/figs/condition-omega-map-", spp, "-", group_tag,
+  ## .ggsave(paste0("stock-specific/", spp, "/figs/condition-omega-map-", spp, "-", group_tag,
   ##  model_name, "-", knot_distance, "-km.png"), height = fig_height, width = fig_width)
   #
   #
@@ -194,7 +194,7 @@ for (j in seq_along(pred_files)){
   #   scale_fill_gradient2() +
   #   scale_colour_gradient2()
   #
-  ## ggsave(paste0("stock-specific/", spp, "/figs/condition-epsilon-map-", spp, "-", group_tag,
+  ## .ggsave(paste0("stock-specific/", spp, "/figs/condition-epsilon-map-", spp, "-", group_tag,
   ##  model_name, "-", knot_distance, "-km.png"), height = fig_height, width = fig_width)
 
 

@@ -499,7 +499,7 @@ ggplot(dat |> mutate(weight = weight/1000) |> filter(
                  )) +
   ggsidekick::theme_sleek() + theme(legend.position = c(0.2,0.8))
 
-browser()
+#browser()
 ggsave(paste0("stock-specific/", spp, "/figs", #if(FRENCH){"-french"},
               "/cond-black-swan-",
               ifelse(is_heavy_tail, "t", "norm"),

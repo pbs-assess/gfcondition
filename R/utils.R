@@ -1,3 +1,12 @@
+.ggsave <- function(filename, ...) {
+  # if (FRENCH) filename <- file.path("fr", filename)
+  op <- options()
+  if (exists("FRENCH")){if (FRENCH) options(OutDec = ",")}
+  ggplot2::ggsave(filename, ...)
+  options(op)
+}
+
+
 #' helper functions
 #' @export
 #'
@@ -191,6 +200,8 @@ map_density <- function(dat, filename, variable = "density_trimmed",
     scale_fill_viridis_c(trans = col_trans) +
     scale_colour_viridis_c(trans = col_trans) +
     labs(x = "", y = "", colour = variable_label, fill = variable_label)
+
+
 }
 
 
