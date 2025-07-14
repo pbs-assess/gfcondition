@@ -32,6 +32,7 @@ plot_mesh <- function(
     facet_wrap(~year, ncol = 5) +
     scale_fill_viridis_c(trans = "fourth_root_power") +
     scale_color_viridis_c(trans = "fourth_root_power") +
+    scale_shape_manual(values=seq(0,length(unique(data_obj$survey_type))))+
     scale_size_continuous(guide = NULL) +
     ggtitle(paste0(group, "")) +
     theme(
