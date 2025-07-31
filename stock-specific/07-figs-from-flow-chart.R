@@ -17,7 +17,8 @@ density_colour_scale <- ggplot2::scale_colour_viridis_c(trans="sqrt", option = "
 # density_colour_scale <- ggplot2::scale_fill_viridis_c(trans="log10")
 # density_colour_scale <- ggplot2::scale_fill_viridis_c(trans="log")
 
-spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+# spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
 dir.create(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
                   "/flow-chart/"), showWarnings = FALSE)
@@ -106,7 +107,7 @@ mat$maturity_plot +
 # options(op)
 
 .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-              "/C-01-maturity.png"),
+              "/C-maturity.png"),
        height = 3, width = 5
 )
 
@@ -174,7 +175,7 @@ ggplot(
     )
 
 .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-              "/C-06-le-crens.png"),
+              "/C-le-crens.png"),
        height = 3.5, width = 5.5
 )
 
@@ -281,7 +282,7 @@ ds$group <- "Sum of split indices"
       y=rosettafish::en2fr("Relative biomass", FRENCH)))
 
 .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-              "/C-05-density-indices.png"),
+              "/C-density-indices.png"),
        height = 3, width = 5
 )
 
@@ -346,7 +347,7 @@ ds$group <- "Sum of split indices"
       y=rosettafish::en2fr("Relative biomass", FRENCH)))
 
 .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-              "/C-05-density-indices-only-sampled.png"),
+              "/C-density-indices-only-sampled.png"),
        height = 3, width = 5
 )
 

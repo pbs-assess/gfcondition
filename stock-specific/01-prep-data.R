@@ -4,7 +4,8 @@ devtools::load_all()
 
 # source("stock-specific/00-set-options.R")
 
-spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+# spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
 # create directories ----
 dir.create(paste0("stock-specific/", spp, "/"), showWarnings = FALSE)

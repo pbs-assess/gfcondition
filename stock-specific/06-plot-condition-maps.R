@@ -3,14 +3,17 @@ library(tidyverse)
 devtools::load_all(".")
 
 # source("stock-specific/00-set-options.R")
-spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+# spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
-model_names <- list.files(paste0("stock-specific/", spp, "/output/cond-pred"),
-                          pattern = "", full.names = FALSE)
+# model_names <- list.files(paste0("stock-specific/", spp, "/output/cond-pred"),
+#                           pattern = "", full.names = FALSE)
+#
+# # for now just plotting first model type
+# # in this case the density agnositic version
+# model_name <- model_names[1]
 
-# for now just plotting first model type
-# in this case the density agnositic version
-model_name <- model_names[1]
+model_name <- model_date
 
 # all sets
 dset <- readRDS(paste0("stock-specific/", spp, "/data/tidy-survey-sets-", spp, ".rds")) %>%
@@ -150,9 +153,9 @@ for (j in seq_along(pred_files)){
 
   .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
                 # "/cond-", model_name[i],
-                "/C-07-09-condition-map-", spp, "-", unique(m$data$group_name), "-",
+                "/C-condition-map-", spp, "-", gsub(" ", "-", unique(m$data$group_name)), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
-         height = 8, width = 8
+         height = 10, width = 8
   )
 
   g <- g + facet_wrap(~year, ncol = 12) +
@@ -161,7 +164,7 @@ for (j in seq_along(pred_files)){
 
   .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
                 "/cond-", model_name[i],
-                "/condition-map-wide-", spp, "-", unique(m$data$group_name), "-",
+                "/condition-map-wide-", spp, "-", gsub(" ", "-", unique(m$data$group_name)), "-",
                 model_name[i], "-", knot_distance, "-km.png"),
          height = 6, width = 11
   )

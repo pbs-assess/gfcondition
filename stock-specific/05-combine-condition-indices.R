@@ -11,19 +11,17 @@ set_legend_position <- c(0.4,0.9)
 
 
 # source("stock-specific/00-set-options.R")
-spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+# spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
 theme_set(ggsidekick:::theme_sleek()+
   theme(plot.margin = unit(c(0.15, 0.2, 0.2, 0.15), "inches")))
 
-model_names <- list.files(paste0("stock-specific/", spp, "/output/cond-pred"),
-                          pattern = "", full.names = FALSE)
+# model_names <- list.files(paste0("stock-specific/", spp, "/output/cond-pred"),
+#                           pattern = "", full.names = FALSE)
 
-
-source("analysis/00-species-list.R")
-
-model_name1 <- model_names[1]
-model_name2 <- model_names[2]
+model_name1 <- model_date
+model_name2 <- paste0(model_date, "-ld0c")
 
 f1 <- list.files(paste0("stock-specific/", spp, "/output/cond-index/",
                         model_name1), pattern = ".rds", full.names = TRUE)
@@ -66,7 +64,7 @@ max_est <- max(d1$est, d2$est,
 
 set_ncol <- 1
 fig_height <- 4
-fig_width <- 6
+fig_width <- 7
 
 g1 <- d1 |> bind_rows(d2)  |>
   mutate(

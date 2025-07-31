@@ -16,7 +16,8 @@ fig_width <- 10
 
 # source("stock-specific/00-set-options.R")
 
-spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+# spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
 dir.create(paste0("stock-specific/", spp, "/output/", "density-models/"), showWarnings = FALSE)
 dir.create(paste0("stock-specific/", spp, "/output/", "density-predictions/"), showWarnings = FALSE)
@@ -619,7 +620,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     theme(legend.position="right")
 
   .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-                "/C-02-density-map-", m1, ".png"),
+                "/C-density-map-", m1, ".png"),
          height = fig_height, width = fig_width
   )
 
@@ -761,7 +762,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     theme(legend.position="right")
 
   ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-                "/C-03-density-map-", m2, ".png"),
+                "/C-density-map-", m2, ".png"),
          height = fig_height, width = fig_width
   )
 
@@ -922,7 +923,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
           theme(legend.position="right")
 
         ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-                      "/C-04-density-map-", m3, ".png"),
+                      "/C-density-map-", m3, ".png"),
                height = fig_height, width = fig_width
         )
       }

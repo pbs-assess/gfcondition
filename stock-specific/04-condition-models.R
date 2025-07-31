@@ -51,8 +51,8 @@ calc_condition_indices <- function(maturity, males, females, add_density, get_mv
   fig_width <- 10
 
 
-
-  spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+  # spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+  spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
   add_density <- add_density
   mat_class <- maturity
@@ -170,13 +170,12 @@ calc_condition_indices <- function(maturity, males, females, add_density, get_mv
   # Load condition data and attach lagged density estimates ----
 
   f <- paste0("stock-specific/", spp, "/output/condition-data-w-dens-",
-              spp, "-", mat_class, "-best-model.rds")
+              spp, "-", mat_class, "-", dens_model_name, ".rds")
 
   if (!file.exists(f)) {
     ds <- readRDS(paste0("stock-specific/", spp, "/output/condition-data-",
                          spp, "-mat-", mat_threshold, ".rds")) %>%
       ungroup() %>%
-
       # TODO: move the following 20 lines to data prep?
       mutate(
         log_depth_c = log_depth - 5,
@@ -568,6 +567,8 @@ calc_condition_indices <- function(maturity, males, females, add_density, get_mv
 
   d <- d %>% filter(year %in% dy$year)
   }
+
+  # include only survey groups with > 30 specimens
   sg <- d %>%
     group_by(survey_group) %>%
     summarise(n = n()) |>
@@ -577,6 +578,20 @@ calc_condition_indices <- function(maturity, males, females, add_density, get_mv
       group = group_label,
       survey_group = fct_reorder(droplevels(survey_group), .x = n, .fun = sum, .desc = TRUE))
 
+  if(!is.null(cond_min_sample_count)) {
+    # include only survey groups with > 3 samples
+    groups_w_samples <- d %>%
+      select(sample_id, survey_group) %>%
+      distinct() %>%
+      group_by(survey_group) %>%
+      summarise(n = n()) |>
+      filter(n > cond_min_sample_count) |>
+      mutate(survey_group = fct_reorder(droplevels(survey_group), .x = n, .fun = sum, .desc = TRUE))
+
+    sg <- filter(sg, survey_group %in% groups_w_samples$survey_group)
+    sg$survey_group <- factor(sg$survey_group, levels = levels(groups_w_samples$survey_group))
+
+  }
 
   dir.create(paste0("stock-specific/", spp, "/output/specimen-counts/"), showWarnings = FALSE)
   saveRDS(sg, paste0("stock-specific/", spp, "/output/specimen-counts/", spp, "-", group_tag, ".rds"))
@@ -647,6 +662,12 @@ calc_condition_indices <- function(maturity, males, females, add_density, get_mv
   }
 
   # Model (density-agnostic) ----
+
+  check_for_duplicates <- d[duplicated(d$specimen_id), ]
+
+  if(nrow(check_for_duplicates)>0){
+    stop(paste(species, "has duplicate specimen ids."))
+  }
 
   rm(m) # just in case it was left in the global environment
 

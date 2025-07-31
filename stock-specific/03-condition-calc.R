@@ -10,7 +10,9 @@ devtools::load_all()
 
 update_m <- FALSE # uses maturity from split_catch_by_sex function run in 01-prep-data
 
-spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+
+# spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
 # Load data ----
 dset <- readRDS(paste0("stock-specific/", spp, "/data/tidy-survey-sets-", spp, ".rds"))
@@ -432,6 +434,12 @@ ds$lw_f_b <- mf$pars$b
 
 ds$lw_m_log_a <- mm$pars$log_a
 ds$lw_m_b <- mm$pars$b
+
+check_for_duplicates <- ds[duplicated(ds$specimen_id), ]
+
+if(nrow(check_for_duplicates)>0){
+  stop(paste(species, "has duplicate specimen ids."))
+}
 
 saveRDS(ds, paste0("stock-specific/", spp, "/output/condition-data-", spp, "-mat-", mat_threshold, ".rds"))
 
