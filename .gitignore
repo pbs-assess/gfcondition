@@ -7,6 +7,8 @@
 *.rdata
 *.rds
 *.png
+*.html
+*.docx
 
 # Stock-specific outputs
 stock-specific/*/data/
