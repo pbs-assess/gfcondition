@@ -1,12 +1,8 @@
 # Set options for a single species analysis
-# Once 01-prep-data.R has been run, this file should be saved to a stock-specific folder
+
 # Species ----
-
-species <- "Pacific Cod"
-# species <- "Yelloweye Rockfish"
-
-stock_name <- "Pacific Cod WCVI"
-# stock_name <- "Yelloweye Rockfish outside"
+species <- "Dover Sole"
+stock_name <- "Dover Sole"
 
 # 1. Data retrieval and filtering options ----
 
@@ -108,7 +104,6 @@ cond_model_prefix <- ""
 ## should we exclude samples from years with fewer than some threshold?
 # min_yr_count <- 10 # current main folder, hasn't been run with density yet
 min_yr_count <- NULL
-
 # cond_min_sample_count <- NULL # to replicate old behaviour
 cond_min_sample_count <- 6
 
@@ -125,7 +120,6 @@ split_index_by_survey <- TRUE
 options(scipen = 100, digits = 4)
 ggplot2::theme_set(ggsidekick::theme_sleek())
 
-
 # B. Split-by-maturity settings ----
 
 ## option for a version that ignores maturity ----
@@ -135,12 +129,9 @@ split_by_maturity <- maturity_possible <- TRUE
 split_by_sex <- TRUE
 immatures_pooled <- TRUE
 
-
 mat_year_re <- FALSE
 mat_threshold <- 0.5
 set_min_sample_number <- 6 # sample cutoff for splits, function default is 10
-
-
 
 ## only generate split data and some exploratory plots ----
 stop_early <- FALSE
@@ -150,79 +141,25 @@ stop_early <- FALSE
 custom_maturity_code <- NULL
 custom_length_threshold <- NULL
 
-# overwrite for certain species
-if (species == "North Pacific Spiny Dogfish") {
-  custom_maturity_code <- c(NA, 55)
-  # # custom_length_threshold <- c(70.9, 86.2)
-  # # set_family <- delta_lognormal_mix()
-  # # set_family2 <- delta_lognormal()
-}
-
-if (species == "Big Skate") {
-  # # McFarlane and King 2006 -- shouldn't be relied on
-  # Ebert et al. 2008
-  custom_length_threshold <- c(102.9, 113.1)
-}
-
-if (species == "Longnose Skate") {
-  # # McFarlane and King 2006
-  # custom_length_threshold <- c(65, 83)
-  # Arrington 2020
-  custom_length_threshold <- c(85, 102)
-}
-
-if (species == "Sandpaper Skate") {
-  # Perez 2005
-  custom_length_threshold <- c(49.2, 46.7)
-}
-
-if (species == "Spotted Ratfish") {
-  # King and McPhie 2015
-  custom_length_threshold <- c(30.2, 39.3)
-}
-
-if (species == "Shortraker Rockfish") {
-  # McDermott 1994:  Hutchinson 2004 F 44.9
-  # Conrath 2017 for female,
-  # Haldorson and Love reported 47 but based on
-  # Westrheim, 1975 for both sexes = 45
-  custom_length_threshold <- c(45, 49.9)
-}
-
-# if (species == "Pacific Halibut") {
-#   # Takada 2017 for females, males less precise.. btw 70-79
-#   # no accurate values for males available so wont use for now
-#   custom_length_threshold <- c(70, 96.7)
-# }
-
-
-# ## could use separate estimates for each year
-# # year_re <- TRUE
-# ## discovered that petrale length at maturity was unusually high in WCVI 2004 and 2006
-# year_re <- FALSE
-# sample_id_re <- TRUE
-#
-# # if(species == "Pacific Halibut") {
-# # year_re <- FALSE
-# # sample_id_re <- FALSE
-# # # fish <- filter(fish, maturity_code != 7 | is.na(maturity_code))
-# # }
 
 ## NEW APPROACH TO RUNNING CODE -----------
-update_models <- TRUE # adds current year and month to density model names
+# update_models <- TRUE # adds current year and month to density model names
 ## OR
-# update_models <- FALSE
+update_models <- FALSE
 # model_date <- "2024-11" # use previous model from this data
+model_date <- "2025-07"
 
 if(update_models) {
   sysdate <- unlist(strsplit(as.character(Sys.Date()), "-"))
+  # dens_model_total <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
+  # dens_model_name1 <- paste0(dens_model_name0, "split-", sysdate[1], "-", sysdate[2], "")
+  # dens_model_name2 <- paste0(dens_model_name0, "only-sampled-", sysdate[1], "-", sysdate[2], "")
   model_date <- paste0(sysdate[1], "-", sysdate[2])
-}
-
-dens_model_total <- paste0(dens_model_name0, model_date)
-dens_model_name1 <- paste0(dens_model_name0, "split-", model_date)
-dens_model_name2 <- paste0(dens_model_name0, "only-sampled-", model_date)
-
+} #else {
+  dens_model_total <- paste0(dens_model_name0, model_date)
+  dens_model_name1 <- paste0(dens_model_name0, "split-", model_date)
+  dens_model_name2 <- paste0(dens_model_name0, "only-sampled-", model_date)
+#}
 
 FRENCH <- FALSE
 
@@ -269,6 +206,7 @@ source("stock-specific/06-plot-condition-maps.R")
 source("stock-specific/07-figs-from-flow-chart.R")
 
 source("stock-specific/08-survey-date-hist.R")
+
 
 ## options for reloading packages without restarting R
 # detach("package:gfcondition, unload=TRUE)
