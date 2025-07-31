@@ -11,7 +11,8 @@ devtools::load_all(".")
 
 source("stock-specific/00-set-options.R")
 
-spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+# spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
 dir.create(paste0("stock-specific/", spp, "/output/density-effects/"), showWarnings = FALSE)
 
@@ -297,6 +298,8 @@ AAAAAA
   )
 }
 
+# # reorder or subset
+# model_names <- model_names[1,3,2,4,6,5,7,9,8]
 
 plot_split_density_effects(model_names, variable = "days_to_solstice", knot_distance)
 plot_split_density_effects(model_names, variable = "log_depth_c", knot_distance)

@@ -1,7 +1,8 @@
 # getting summary of condition sample sizes
 library(tidyverse)
 source("stock-specific/00-set-options.R")
-spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+# spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
 f <- list.files(paste0("stock-specific/", spp, "/output/specimen-counts/"), pattern = ".rds", full.names = TRUE)
 

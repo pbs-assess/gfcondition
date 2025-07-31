@@ -1,7 +1,8 @@
 # check which surveys to include for which species
 library(tidyverse)
 source("stock-specific/00-set-options.R")
-spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+# spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
 d1 <- readRDS(paste0("stock-specific/", spp, "/output/surv-summary-",spp, ".rds"))
 

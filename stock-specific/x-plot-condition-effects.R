@@ -11,7 +11,8 @@ devtools::load_all(".")
 
 source("stock-specific/00-set-options.R")
 
-spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+# spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
+spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
 dir.create(paste0("stock-specific/", spp, "/output/condition-effects/"), showWarnings = FALSE)
 
