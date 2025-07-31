@@ -100,6 +100,7 @@ cond_model_prefix <- ""
 ## should we exclude samples from years with fewer than some threshold?
 # min_yr_count <- 10 # current main folder, hasn't been run with density yet
 min_yr_count <- NULL
+cond_min_sample_count <- NULL # to replicate old behaviour
 
 # to run using future package
 # gfcondition must be installed
@@ -146,22 +147,20 @@ FRENCH <- FALSE
 update_models <- FALSE
 model_date <- "2024-11" # use previous model from this data
 
-
 if(update_models) {
   sysdate <- unlist(strsplit(as.character(Sys.Date()), "-"))
-  dens_model_total <- paste0(dens_model_name0, sysdate[1], "-", sysdate[2], "")
-  dens_model_name1 <- paste0(dens_model_name0, "split-", sysdate[1], "-", sysdate[2], "")
-  dens_model_name2 <- paste0(dens_model_name0, "only-sampled-", sysdate[1], "-", sysdate[2], "")
-} else {
-  dens_model_total <- paste0(dens_model_name0, model_date)
-  dens_model_name1 <- paste0(dens_model_name0, "split-", model_date)
-  dens_model_name2 <- paste0(dens_model_name0, "only-sampled-", model_date)
+  model_date <- paste0(sysdate[1], "-", sysdate[2])
 }
 
+dens_model_total <- paste0(dens_model_name0, model_date)
+dens_model_name1 <- paste0(dens_model_name0, "split-", model_date)
+dens_model_name2 <- paste0(dens_model_name0, "only-sampled-", model_date)
 
 source("stock-specific/02-sdm.R")
 
 FRENCH <- TRUE
+
+# NOTE: file names have had C- added as a prefix and numbering removed since originally run
 
 source("stock-specific/02-sdm.R")
 
@@ -180,6 +179,9 @@ source("stock-specific/06-plot-condition-maps.R")
 ### maturity, le crens and density index figures
 ### could produce complete flow chart figures with a little updating
 source("stock-specific/07-figs-from-flow-chart.R")
+
+# not yet translated
+source("stock-specific/08-survey-date-hist.R")
 
 ## not working within this script for some reason
 ## options for reloading packages without restarting R
