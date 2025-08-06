@@ -31,10 +31,15 @@ set_list <- dset %>%
     lon = longitude, lat = latitude)
 
 for(i in seq_along(model_name)) {
-pred_files <- list.files(paste0("stock-specific/", spp, "/output/cond-pred/", model_name[i]),
-                          pattern = "", full.names = TRUE)
-model_files <- list.files(paste0("stock-specific/", spp, "/output/condition-models/", model_name[i]),
-                         pattern = "", full.names = TRUE)
+pred_files <- list.files(paste0("stock-specific/", spp,
+                                "/output/cond-pred/", model_name[i]),
+                                pattern = "", full.names = TRUE)
+
+model_files <- list.files(paste0("stock-specific/", spp,
+                                 "/output/condition-models/", model_name[i]),
+                                 pattern = "", full.names = TRUE)
+
+
 for (j in seq_along(pred_files)){
 
   rm(m)
@@ -42,7 +47,6 @@ for (j in seq_along(pred_files)){
   m <- readRDS(model_files[j])
 
   p1 <- readRDS(pred_files[j])
-
 
   # filter to plot only cells representing 99% of mean predicted biomass
   # cells must be defined by "X", "Y", time by "year", and biomass/abundance stored as "density"

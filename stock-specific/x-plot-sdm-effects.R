@@ -9,7 +9,7 @@ library(patchwork)
 library(gridGraphics)
 devtools::load_all(".")
 
-source("stock-specific/00-set-options.R")
+# source("stock-specific/00-set-options.R")
 
 # spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))

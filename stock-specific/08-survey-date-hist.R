@@ -26,14 +26,22 @@ ggplot(d2) +
   geom_histogram(aes(DOY, fill = survey_abbrev), binwidth = 5) +
   coord_cartesian(expand = FALSE) +
   scale_fill_viridis_d(option = "G", direction = -1, end = 0.95, begin = 0.15) +
-  labs(y = "Specimens sampled", fill = "Survey")
+  labs(x = rosettafish::en2fr("Day of year", FRENCH),
+       y = rosettafish::en2fr("Specimens sampled", FRENCH),
+       fill = rosettafish::en2fr("Survey", FRENCH)
+       )
 
-ggsave(paste0("stock-specific/", spp, "/figs/E-sample-date-hist.png"), width = 6, height = 3)
+ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+              "/E-sample-date-hist.png"), width = 6, height = 3)
 
 ggplot(d2) +
   geom_histogram(aes(year, fill = survey_abbrev), binwidth = 1) +
   coord_cartesian(expand = FALSE) +
   scale_fill_viridis_d(option = "G", direction = -1, end = 0.95, begin = 0.15) +
-  labs(x = "Year", y = "Specimens sampled", fill = "Survey")
+  labs(x = rosettafish::en2fr("Year", FRENCH),
+       y = rosettafish::en2fr("Specimens sampled", FRENCH),
+       fill = rosettafish::en2fr("Survey", FRENCH)
+       )
 
-ggsave(paste0("stock-specific/", spp, "/figs/C-sample-year-hist.png"), width = 6, height = 3)
+ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+              "/C-sample-year-hist.png"), width = 6, height = 3)

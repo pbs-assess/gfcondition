@@ -17,6 +17,8 @@ major_areas <- c("01", "03", "04", "05", "06", "07", "08", "09",
                  "11", # bc offshore waters
                  "71","72","73","74","75","76","77","99")
 
+survey_grids <- c("SYN QCS", "SYN WCVI", "SYN HS", "SYN WCHG")
+
 ## set surveys from which any data can be used (maturities, condition, and/or densities) ----
 ## use default survey_abbrev
 tidy_surveys_included <- c("HBLL OUT N", "HBLL OUT S",
@@ -209,7 +211,7 @@ source("stock-specific/08-survey-date-hist.R")
 
 
 ## options for reloading packages without restarting R
-# detach("package:gfcondition, unload=TRUE)
+# detach("package:gfcondition", unload=TRUE)
 # detach("package:gfplot", unload=TRUE)
 # detach("package:rosettafish", unload=TRUE)
 

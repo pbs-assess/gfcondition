@@ -80,9 +80,9 @@ format_survey_labels <- function(data) {
         case_when(
           survey_abbrev %in% c("HBLL OUT S", "HBLL OUT N")~"HBLL",
           survey_abbrev == "HS MSA"~"MSA",
-          survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year>2002 & year<=2005~"MSSM<=05",
+          survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year>2002 & year<=2005~"MSSM:03-05",
           survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year>2005~"MSSM>05",
-          survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year <= 2002~"MSSM <03",
+          survey_abbrev %in% c("MSSM WCVI", "MSSM QCS") & year <= 2002~"MSSM<03",
           survey_abbrev %in% c("SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI")~"SYN",
           survey_abbrev %in% c("EUL N", "EUL S")~"EUL",
           TRUE~survey_abbrev

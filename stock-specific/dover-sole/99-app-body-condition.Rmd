@@ -6,7 +6,7 @@ output:
  csasdown::manureport_word:
    french: false
    
-bibliography: refs.bib
+bibliography: ../refs.bib
 header-includes:
   -  \usepackage{bm}
 ---
@@ -93,7 +93,7 @@ thorny_years <- length(unique(mc_data[mc_data$survey_abbrev %in% c("THORNYHEAD")
 ```
 
 
-# SEX AND MATURITY SPECIFIC INDICES OF BODY CONDITION
+# SEX AND MATURITY SPECIFIC INDICES OF BODY CONDITION {#app:condition}
 
 Because the condition of mature male, mature female (SSB in this assessment), and immature individuals have different implications for population dynamics, observation error characteristics, and potentially even different ecological drivers, we first separated individuals and overall catches into immatures, mature males and mature females. 
 We then estimated independent spatiotemporal biomass distributions, calculated individual Le Cren’s relative body condition deviations, modelled spatiotemporal change in these deviations, and generated a density-weighted annual index of average condition for each component of the population. 
@@ -154,9 +154,12 @@ When individual weights were missing, but lengths were known, individuals were a
 <!-- In past have refered to biological appendix of stock assessment, although could be added here too for completeness. -->
 
 For each sampled tow, we then split the total catch of each species into immature, mature males, and mature females using the observed proportions by weight among the individually measured specimens. 
-<!-- Only include this next sentence when dens_model_name does not include "only-sampled" -->
 For unsampled tows in all survey-year combinations with at least six sampled tows, we applied the average proportion of each category from all sampled tows in that survey-year. 
-We excluded any survey-year combinations with less than six tows.
+<!-- Only include this next sentence when dens_model_name does include "only-sampled" -->
+<!-- We excluded any survey-year combinations with less than six tows. -->
+<!-- Only include this next sentence when dens_model_name does NOT include "only-sampled" -->
+For unsampled tows in any survey-year combinations with less than 6 tows, we applied the average proportion of each class from all surveys in that year (as long as the average SD in proportions across all years within that survey was greater than the SD across all surveys within each year, and at least six tows were measured in all surveys that year), or for all years for each survey (if there were fewer than six tows across all surveys with measurements in that year, or the average SD in proportions across all years within each survey was less than the SD across all surveys within each year). 
+Finally, for surveys with fewer than this threshold over all years, the global average proportions were applied. 
 
 ## SPATIOTEMPORAL ESTIMATES OF BIOMASS DENSITY
 
@@ -187,7 +190,8 @@ $$
 $$
 
 where $\alpha$ represents the intercept for synoptic trawl surveys, $X_{s,t}$ represents a vector of predictors (factors for other survey types, and second order orthogonal polynomials of log depth and day-of-year relative to the summer solstice), and $\beta$ represents a vector of corresponding parameters.
-The subscripts 1 and 2 denote the equivalent parameters from the first (Bernoulli) and second (lognormal) linear predictors.
+<!-- Check that family is still correct here -->
+The subscripts 1 and 2 denote the equivalent parameters from the first (Bernoulli) and second (`r if(dens_model_name0 == "dln-"){"lognormal"}else{"????"}`) linear predictors.
 
 We constrained the covariance via a Matérn covariance function with the range (distance at which correlation is effectively independent) being allowed to differ between the spatial and spatiotemporal fields. 
 Each symbol $\omega_s$ represents spatially correlated random effects (a random field) that are constant through time, which are assumed to follow a multivariate normal distribution with covariance matrix $\Sigma_\omega$:
@@ -230,17 +234,17 @@ These predictions also act as covariates and weighting for subsequent condition 
 
 <!-- < fig 3 > -->
 ```{r dens-map-fem, echo=FALSE, fig.align='center', fig.pos='h', out.width="7in", fig.cap="Predicted mature female biomass density distribution using all catches from surveys with at least 1% positive catches."}
-knitr::include_graphics(here::here(paste0("stock-specific/",spp,"/figs/C-density-map-dover-sole-mat-fem-",dens_model_name,"-", knot_distance, "-km.png")))
+knitr::include_graphics(here::here(paste0("stock-specific/",spp,"/figs/C-density-map-",spp,"-mat-fem-",dens_model_name,"-", knot_distance, "-km.png")))
 ```
 
 <!-- < fig 4 > -->
 ```{r dens-map-mm, echo=FALSE, fig.align='center', fig.pos='h', out.width="7in", fig.cap="Predicted mature male biomass density distribution using all catches from surveys with at least 1% positive catches."}
-knitr::include_graphics(here::here(paste0("stock-specific/",spp,"/figs/C-density-map-dover-sole-mat-m-",dens_model_name,"-", knot_distance, "-km.png")))
+knitr::include_graphics(here::here(paste0("stock-specific/",spp,"/figs/C-density-map-",spp,"-mat-m-",dens_model_name,"-", knot_distance, "-km.png")))
 ```
 
 <!-- < fig 5 > -->
 ```{r dens-map-imm, echo=FALSE, fig.align='center', fig.pos='h', out.width="7in", fig.cap="Predicted immature biomass density distribution using all catches from surveys with at least 1% positive catches."}
-knitr::include_graphics(here::here(paste0("stock-specific/",spp,"/figs/C-density-map-dover-sole-imm-",dens_model_name,"-", knot_distance, "-km.png")))
+knitr::include_graphics(here::here(paste0("stock-specific/",spp,"/figs/C-density-map-",spp,"-imm-",dens_model_name,"-", knot_distance, "-km.png")))
 ```
 
 <!-- < fig 6 > -->
