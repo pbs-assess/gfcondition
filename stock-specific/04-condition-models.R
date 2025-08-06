@@ -905,6 +905,7 @@ calc_condition_indices <- function(maturity, males, females, add_density, get_mv
     grid <- gridA
   }
 
+  grid <- filter(grid, survey %in% survey_grids)
   grid$survey_group <- levels(sg$survey_group)[1]
 
   sort(unique(m$data$year))
@@ -1011,7 +1012,7 @@ calc_condition_indices <- function(maturity, males, females, add_density, get_mv
 
 
   # Get survey-specific condition indices ----
-  if(split_index_by_survey) {
+  if(split_index_by_survey & length(survey_grids)>1) {
 
 
     dir.create(paste0("stock-specific/", spp, "/output/cond-index-by-survey/"), showWarnings = FALSE)

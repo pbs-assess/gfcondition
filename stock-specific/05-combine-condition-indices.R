@@ -1,4 +1,8 @@
-# plots combining density indices for all species
+# plots combining density indices
+# TODO: revise to work for local stocks
+# probably need to filter prediction grid to major areas
+# maybe switch to using grid created for lingcod area biomass estimates?
+
 library(tidyverse)
 library(sdmTMB)
 library(patchwork)
@@ -9,8 +13,9 @@ devtools::load_all(".")
 
 set_legend_position <- c(0.4,0.9)
 
-
 # source("stock-specific/00-set-options.R")
+
+
 # spp <- gsub(" ", "-", gsub("\\/", "-", tolower(species)))
 spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 
@@ -174,7 +179,7 @@ g1 <- d1 |> bind_rows(d2)  |>
        width = fig_width
 )
 
-
+if(length(survey_grids)>1){
 f3 <- list.files(paste0("stock-specific/", spp, "/output/cond-index-by-survey/",
                         model_name1), pattern = ".rds", full.names = TRUE)
 
@@ -262,10 +267,24 @@ g2 <- d3 |> bind_rows(d4)  |>
 
 
 .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-              "/C-00-",
-              spp, "-all-condition-indices-w-split-",
-              model_name2,
-              ".png"),
-       height = fig_height*2,
-       width = fig_width
+               "/C-00-",
+               spp, "-all-condition-indices-w-split-",
+               model_name2,
+               ".png"),
+        height = fig_height*2,
+        width = fig_width
 )
+} else {
+
+  g1
+
+  .ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
+                 "/C-00-",
+                 spp, "-all-condition-indices-w-split-",
+                 model_name2,
+                 ".png"),
+          height = fig_height,
+          width = fig_width
+  )
+}
+

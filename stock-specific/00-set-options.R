@@ -21,6 +21,15 @@ major_areas <- c("01", "03", "04", "05", "06", "07", "08", "09",
                  "11", # bc offshore waters
                  "71","72","73","74","75","76","77","99")
 
+
+survey_grids <- c("SYN QCS", "SYN WCVI", "SYN HS", "SYN WCHG")
+
+# # just WCVI PCOD stock
+# major_areas <- c("03", #3C: S.W. VANCOUVER ISLAND
+#                  "04", #3D: N.W. VANCOUVER ISLAND
+#                  "71") #3CD: WEST COAST VANCOUVER ISLAND
+
+
 ## set surveys from which any data can be used (maturities, condition, and/or densities) ----
 ## use default survey_abbrev
 tidy_surveys_included <- c("HBLL OUT N", "HBLL OUT S",
@@ -56,18 +65,21 @@ dens_model_name_long <- "depth, DOY, and survey type"
 
 
 ## if running alternatives can review x-plot-sdm-effects.R figs and model AICs to help choose which models to use
-set_family <- sdmTMB::delta_lognormal() # lower AIC for lingcod
-dens_model_name0 <- "dln-"
+# set_family <- sdmTMB::delta_lognormal() # lower AIC for lingcod
+# dens_model_name0 <- "dln-"
 
 
 # set_family <- sdmTMB::delta_gamma()
 # dens_model_name0 <- "dg-"
 
-# set_family <- sdmTMB::delta_gengamma()
-# dens_model_name0 <- "dgg-"
+set_family <- sdmTMB::delta_gengamma()
+dens_model_name0 <- "dgg-"
 
 set_family2 <- sdmTMB::tweedie()
-knot_distance <<- 20
+# set_family2 <- sdmTMB::delta_lognormal()
+
+# knot_distance <<- 20 # for coastwide models
+knot_distance <<- 5 # for WCVI models
 
 ## all surveys possible for density models ----
 sdm_surveys_included <- c(

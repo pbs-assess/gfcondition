@@ -279,9 +279,9 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     select(survey_abbrev, year) %>%
     distinct() %>%
     mutate(survey = ifelse(survey_abbrev %in% c("HS MSA", "HS PCOD"), "SYN HS",
-                           ifelse(survey_abbrev == "MSSM QCS", "SYN QCS",
-                                  ifelse(survey_abbrev %in% c("THORNYHEAD", "MSSM WCVI"), "SYN WCVI",
-                                         survey_abbrev))
+      ifelse(survey_abbrev == "MSSM QCS", "SYN QCS",
+      ifelse(survey_abbrev %in% c("THORNYHEAD", "MSSM WCVI"), "SYN WCVI",
+                                  survey_abbrev))
     ))
 
   all_years <- unique(d1$year)
@@ -423,7 +423,6 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
 
   # TODO: add R2 once it's working for delta models
   # r2_total <- r2.sdmTMB(m)
-
   if (is.null(extra_years)) {
     grid <- filter(grid, year %in% c(sort(unique(m$data$year))))
   } else {
@@ -432,6 +431,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     grid <- filter(grid, year %in% sort(union(m$data$year, m$extra_time)))
   }
 
+  grid <- filter(grid, survey %in% survey_grids)
 
   if (file.exists(pfn) & file.exists(i0)) {
     p <- readRDS(pfn)
@@ -722,14 +722,14 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     }
     saveRDS(mm, fmm)
 
-    if (!all(sanity(mm, gradient_thresh = 0.005))) {
+    if (!all(unlist(sanity(mm, gradient_thresh = 0.005)))) {
       mm <- refine_model(mm, alternate_family = set_family2, use_priors = set_priors)
     }
     saveRDS(mm, fmm)
   } else {
     mm <- readRDS(fmm)
     # mm <- sdmTMB:::update_version(mm)
-    if (!all(sanity(mm, gradient_thresh = 0.005))) {
+    if (!all(unlist(sanity(mm, gradient_thresh = 0.005)))) {
       mm <- refine_model(mm, alternate_family = set_family2, use_priors = set_priors)
     }
     saveRDS(mm, fmm)
@@ -870,7 +870,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
 
       if(exists("mi")){
         saveRDS(mi, fmi)
-        if (!all(sanity(mi, gradient_thresh = 0.005))) {
+        if (!all(unlist(sanity(mi, gradient_thresh = 0.005)))) {
           mi <- refine_model(mi, alternate_family = set_family2,
                              use_priors = set_priors)
         }
@@ -880,7 +880,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
     } else {
       mi <- readRDS(fmi)
       # mi <- sdmTMB:::update_version(mi)
-      if (!all(sanity(mi, gradient_thresh = 0.005))) {
+      if (!all(unlist(sanity(mi, gradient_thresh = 0.005)))) {
         mi <- refine_model(mi, alternate_family = set_family2,
                            use_priors = set_priors)
       }
@@ -899,7 +899,7 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
 
       # browser()
 
-      if (all(s)) {
+      if (all(unlist(s))) {
         if (file.exists(pifn) & file.exists(i3)) {
           pi <- readRDS(pifn)
         } else {
@@ -954,6 +954,8 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
   ## Plot coastwide indices ----
   m <- readRDS(fm)
 
+  if(length(survey_grids) == 1) {
+
   (p1 <- bc_inds %>%
       mutate(index = fct_relevel(index, rev)) %>%
       ggplot(aes(year, est/1000)) +
@@ -972,14 +974,17 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
         " (", paste(unique(m$data$survey_type), collapse = ", "), ")"
       )))
 
-  # p1
-  # ggsave(paste0("stock-specific/", spp, "/figs", if(FRENCH){"-french"},
-  # "/density-index-", spp, "-all",
-  # dens_model_name, "-", knot_distance, "-km.png"),
-  # height = fig_height / 2, width = fig_width / 1.5
-  # )
+  ggsave(paste0("stock-specific/", spp, "/figs", #if(FRENCH){"-french"},
+                "/density-all-indices-", spp, "-",
+                dens_model_name, "-", knot_distance, "-km.png"
+  ),
+  height = fig_height / 2, width = fig_width
+  )
+
+  } else {
 
   # Generate split indices ----
+
   fsi <- paste0(
     "stock-specific/", spp, "/output/", "density-split-ind/", spp, "-split-",
     dens_model_name, "-", knot_distance, "-km.rds"
@@ -1068,6 +1073,8 @@ dir.create(paste0("stock-specific/", spp, "/output/", "density-index/"), showWar
   ),
   height = fig_height, width = fig_width
   )
+  }
+
 }
 
 make_all_sdms()
