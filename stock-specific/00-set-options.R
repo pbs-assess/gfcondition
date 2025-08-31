@@ -2,11 +2,11 @@
 # Once 01-prep-data.R has been run, this file should be saved to a stock-specific folder
 # Species ----
 
-species <- "Pacific Cod"
-# species <- "Yelloweye Rockfish"
+# species <- "Pacific Cod"
+species <- "Yelloweye Rockfish"
 
-stock_name <- "Pacific Cod WCVI"
-# stock_name <- "Yelloweye Rockfish outside"
+# stock_name <- "Pacific Cod WCVI"
+stock_name <- "Yelloweye Rockfish outside"
 
 # 1. Data retrieval and filtering options ----
 
@@ -16,18 +16,30 @@ get_PE_cached_data <- TRUE
 
 ## set major areas ----
 ## this defines the "stock"
-## here using all canadian waters
-major_areas <- c("01", "03", "04", "05", "06", "07", "08", "09",
-                 "11", # bc offshore waters
-                 "71","72","73","74","75","76","77","99")
+# ## here using all canadian waters
+# major_areas <- c("01", # 4B - strait of georgia
+#                  "03", "04", "05", "06", "07", "08", "09",
+#                  "11", # bc offshore waters
+#                  # "68", # puget sound
+#                  "71","72","73","74","75","76","77",
+#                  "78","79" # overlap with 4B
+#                  # "99" #undefined
+#                  )
 
 
-survey_grids <- c("SYN QCS", "SYN WCVI", "SYN HS", "SYN WCHG")
+# survey_grids <- c("SYN QCS", "SYN WCVI", "SYN HS", "SYN WCHG")
+# survey_grids <- c("HBLL OUT N", "HBLL OUT S")
 
 # # just WCVI PCOD stock
 # major_areas <- c("03", #3C: S.W. VANCOUVER ISLAND
 #                  "04", #3D: N.W. VANCOUVER ISLAND
 #                  "71") #3CD: WEST COAST VANCOUVER ISLAND
+
+# just offshore
+major_areas <- c("03", "04", "05", "06", "07", "08", "09",
+                 "11", # bc offshore waters
+                 "71","72","73","74","75","76","77"
+                 )
 
 
 ## set surveys from which any data can be used (maturities, condition, and/or densities) ----
@@ -39,13 +51,13 @@ tidy_surveys_included <- c("HBLL OUT N", "HBLL OUT S",
                       "OTHER", # filtered with other_surveys_kept
                       "HS MSA", "SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI")
 
-
 other_surveys_kept <- c(5, # PCOD
                         9, # Rockfish survey pre 2000?
                         11, # THORNYHEAD
                         79, # Triennial
                         68 # HAKE
                         )
+
 
 ## Notes on SABLE:
 ## at different time of year than all the others and only has weights for certain species
@@ -56,6 +68,10 @@ set_utm_crs <- 32609
 
 # 2. Density model options ----
 
+# if using something other than trawl catch weights to model density
+# for now, if not setting this to catch_count, will default to options appropriate for trawl data unless updated
+set_catch_variable <- "catch_count"
+
 ## structure and name ----
 ## *name_long is printed on figures along with resulting family
 ## set_family is the starting choice which is reflected in the *_name0
@@ -63,11 +79,20 @@ set_utm_crs <- 32609
 
 dens_model_name_long <- "depth, DOY, and survey type"
 
-
 ## if running alternatives can review x-plot-sdm-effects.R figs and model AICs to help choose which models to use
+
+if(set_catch_variable == "catch_count"){
+  set_family <- sdmTMB::nbinom2()
+  dens_model_name0 <- "nb2-"
+
+  set_family2 <- sdmTMB::delta_truncated_nbinom2()
+
+  knot_distance <<- 10 # for coastwide models
+
+} else {
+
 # set_family <- sdmTMB::delta_lognormal() # lower AIC for lingcod
 # dens_model_name0 <- "dln-"
-
 
 # set_family <- sdmTMB::delta_gamma()
 # dens_model_name0 <- "dg-"
@@ -78,19 +103,29 @@ dens_model_name0 <- "dgg-"
 set_family2 <- sdmTMB::tweedie()
 # set_family2 <- sdmTMB::delta_lognormal()
 
-# knot_distance <<- 20 # for coastwide models
-knot_distance <<- 5 # for WCVI models
+
+knot_distance <<- 20 # for coastwide models
+# knot_distance <<- 5 # for WCVI models
+
+}
+
 
 ## all surveys possible for density models ----
+# sdm_surveys_included <- c(
+#   "HS MSA",
+#   "HS PCOD",
+#   "THORNYHEAD",
+#   "TRIENNIAL",
+#   "SYN HS", "SYN QCS",
+#   "SYN WCHG", "SYN WCVI",
+#   "MSSM QCS", "MSSM WCVI", # already filtered to avoid duplication
+#   "HAKE"
+# )
+
 sdm_surveys_included <- c(
-  "HS MSA",
-  "HS PCOD",
-  "THORNYHEAD",
-  "TRIENNIAL",
-  "SYN HS", "SYN QCS",
-  "SYN WCHG", "SYN WCVI",
-  "MSSM QCS", "MSSM WCVI", # already filtered to avoid duplication
-  "HAKE"
+  "HBLL OUT N",
+  "HBLL OUT S",
+  "IPHC FISS"
 )
 
 
