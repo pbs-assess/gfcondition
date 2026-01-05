@@ -1,4 +1,4 @@
-## gfcondition: indices of average groundfish body condition 
+## gfcondition: Annual indices of average groundfish body condition 
 
 This repository contains code used to generate sex and maturity specific indices 
 of average body condition and associated density distributions for most species 
