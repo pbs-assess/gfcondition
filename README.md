@@ -17,3 +17,7 @@ on their own. These files are either sourced by other files, or contain the orig
 data retrieval and processing steps used to generate the data files provided. 
 Scripts without numbers ("x-") are for plotting, supplementary tests, 
 or summary statistic, and may need to be run after the main analysis is complete.
+Script "05-dfa.R" can be run repeatedly for each sex and maturity class (e.g., 
+set_group <- "mature males") and with and withoug using condition indices where the 
+estimated effects of density-dependence have been removed from the estmated annual 
+averages (e.g., adjusted_for_density <- TRUE). 
