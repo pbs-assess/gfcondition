@@ -10,14 +10,14 @@ These analyses are described in:
 > as a Shared Response to Environment in a Commercially Important Demersal
 > Fish Assemblage. Fish and Fisheries. <https://doi.org/10.1111/faf.70053>
 
-All data retrieval, processing, and analysis scripts are found in the "analysis" 
+All data retrieval, processing, and analysis scripts are found in the `analysis` 
 folder and are numbered in the order that they must be run. Scripts starting with 
-"00-" are for data preparation and are provided for reference, but do not to be run 
+`00-` are for data preparation and are provided for reference, but do not need to be run 
 on their own. These files are either sourced by other files, or contain the original 
 data retrieval and processing steps used to generate the data files provided. 
-Scripts without numbers ("x-") are for plotting, supplementary tests, 
+Scripts without numbers (`x-`) are for plotting, supplementary tests, 
 or summary statistic, and may need to be run after the main analysis is complete.
-Script "05-dfa.R" can be run repeatedly for each sex and maturity class (e.g., 
-set_group <- "mature males") and with and withoug using condition indices where the 
+Script `05-dfa.R` can be run repeatedly for each sex and maturity class (e.g., 
+`set_group <- "mature males"`) and with and withoug using condition indices where the 
 estimated effects of density-dependence have been removed from the estmated annual 
-averages (e.g., adjusted_for_density <- TRUE). 
+averages (e.g., `adjusted_for_density <- TRUE`). 
