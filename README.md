@@ -8,7 +8,7 @@ These analyses are described in:
 
 > English, P.A., Anderson, S.C., and Forrest, R.E. (2026) Body Condition
 > as a Shared Response to Environment in a Commercially Important Demersal
-> Fish Assemblage. Fish and Fisheries, in press.
+> Fish Assemblage. Fish and Fisheries. <https://doi.org/10.1111/faf.70053>
 
 All data retrieval, processing, and analysis scripts are found in the "analysis" 
 folder and are numbered in the order that they must be run. Scripts starting with 
