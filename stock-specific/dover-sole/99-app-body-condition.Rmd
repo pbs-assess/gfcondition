@@ -7,6 +7,7 @@ output:
    french: false
    
 bibliography: ../refs.bib
+csl: ../csas.csl
 header-includes:
   -  \usepackage{bm}
 ---
@@ -309,11 +310,13 @@ knitr::include_graphics(here::here(paste0("stock-specific/",spp,"/figs/C-conditi
 
 ### Body condition indices
 <!-- Describe the indices -->
-Indices of average body condition...  (Figure \@ref(fig:cond-indices)A). 
+Indices of coastwide average `r species` body condition have been increasing for all maturity classes with the exception of 2019 when it dropped for all classes (Figure \@ref(fig:cond-indices)A). This drop was steepest among immatures, which reached their highest biomass for this time series in that year. However, it does not appear that density-dependence alone can explain this pattern, because mature fish biomass continues climbing while experiencing a similar rebound in body condition.
+
 <!-- Does any class show greater inter-annual variability than the others?  -->
 <!-- Does any class show any statistical evidence of negative density-dependence in the spatial condition models and therefore have this effect removed before testing for environmental correlates of body condition? -->
 <!-- Describe differences between regions -->
-Splitting these indices by synoptic trawl survey area suggests that ... (Figure \@ref(fig:cond-indices)B).
+Splitting these indices by synoptic trawl survey area suggests that inter annual patterns in body condition differ a lot between regions of the coast (Figure \@ref(fig:cond-indices)B). 
+Body condition plummets in WCVI and/or QCS in 2019 for all classes, but most steeply and with a quicker recovery among immatures.
 
 ```{r cond-indices, echo=FALSE, fig.align='center', fig.pos='h', out.width="5.5in", fig.cap="Annual average body condition deviations for immatures (purple), mature males (turquoise), and mature females (yellow) estimated for the summer solstice in all areas sampled by synoptic trawl surveys using a spatiotemporal model. Solid lines represent modelled population predictions, while dashed lines represent the average condition adjusted to exclude any estimated negative effects of local biomass density. All variables have been standardized within the time period tested, so an estimate of 1 for the linear component means that 1 SD in that variable is predicted to increase body condition by 1 SD."}
 knitr::include_graphics(here::here(paste0("stock-specific/",spp,"/figs/C-00-",spp,"-all-condition-indices-w-split-",model_date,"-ld0c.png")))
