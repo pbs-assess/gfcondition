@@ -5,7 +5,7 @@
 # FRENCH <- FALSE
 
 # Species ----
-species <- "Lingcod"
+stock_name <- species <- "Lingcod"
 
 # 1. Data retrieval and filtering options ----
 

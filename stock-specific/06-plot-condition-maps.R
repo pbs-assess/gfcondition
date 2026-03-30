@@ -14,6 +14,7 @@ spp <- gsub(" ", "-", gsub("\\/", "-", tolower(stock_name)))
 # model_name <- model_names[1]
 
 model_name <- model_date
+model_name <- c(model_name, paste0(model_name,"-ld0c"))
 
 # all sets
 dset <- readRDS(paste0("stock-specific/", spp, "/data/tidy-survey-sets-", spp, ".rds")) %>%
