@@ -22,6 +22,7 @@ library(patchwork)
 library(pacea)
 library(lubridate)
 library(slider)
+library(GGally)
 
 
 
@@ -315,15 +316,28 @@ m_lw6.1 <- glmmTMB(
   )
 )
 
+##
+# simplest
+m_lw7.1 <- glmmTMB(
+  log_weight ~ log_length * Sex
+  ,
+  data = lwa,
+  family = gaussian(),
+  control = glmmTMBControl(
+    optCtrl = list(iter.max = 1e4, eval.max = 1e4)
+  )
+)
+
+
 AIC(m_lw1.1, m_lw1.2, m_lw2.1, m_lw2.2,
     m_lw3.1, m_lw3.2, m_lw4.1, m_lw4.2,
-    m_lw5.1, m_lw5.2, m_lw6.1
+    m_lw5.1, m_lw5.2, m_lw6.1, m_lw7.1
     )
 
-anova(m_lw1.1, m_lw2.1, m_lw3.1, m_lw5.1)
+anova(m_lw1.1, m_lw2.1, m_lw3.1, m_lw5.1, m_lw7.1)
 
-# selected model
-m_lw_selected <- m_lw3.1
+# selected model - simple one for lw model
+m_lw_selected <- m_lw7.1
 
 
 # -----------------------------
@@ -437,6 +451,7 @@ cond_monthly <- lwa_cond %>%
 cond_annual <- lwa_cond %>%
   group_by(year) %>%
   summarise(
+    mean_age = mean(as.numeric(as.character(Age_yrs)), na.rm = TRUE),
     mean_Kn = mean(Kn, na.rm = TRUE),
     median_Kn = median(Kn, na.rm = TRUE),
     mean_log_Kn = mean(log_Kn, na.rm = TRUE),
@@ -662,10 +677,20 @@ cor_results
 # -----------------------------
 # 1.8 Mixed effects models for environmental effects
 # -----------------------------
+
+# filter only canada or us data
+filter_index <- unique(lwa_cond$Source)
+filter_index <- c("CAN_acoustic", "CAN_shoreside", "CAN_JV","CAN_polish", "Acoustic Canada")
+filter_index <- c("US_foreign", "US_JV", "US_shore", "US_acoustic", "US_atsea", "Acoustic U.S.")
+
+lwa_env <- lwa_cond %>%
+  filter(Source %in% filter_index)
+
+
 # Fish-level model: body condition as response.
 # Environmental covariates joined to each fish by Year-Month.
 
-lwa_env <- lwa_cond %>%
+lwa_env <- lwa_env %>%
   mutate(
     year = as.integer(as.character(year)),
     month = as.integer(as.character(month))
@@ -713,9 +738,28 @@ env_model_results <- map_dfr(names(env_models), function(v) {
 
 env_model_results
 
+
 # -----------------------------
 # 1.9 Plot environmental relationships
 # -----------------------------
+
+# filter out Source
+cond_monthly <- lwa_cond %>%
+  filter(Source %in% filter_index) %>%
+  group_by(year, month) %>%
+  summarise(
+    mean_Kn = mean(Kn, na.rm = TRUE),
+    median_Kn = median(Kn, na.rm = TRUE),
+    mean_log_Kn = mean(log_Kn, na.rm = TRUE),
+    sd_log_Kn = sd(log_Kn, na.rm = TRUE),
+    se_log_Kn = sd_log_Kn / sqrt(n()),
+    n_fish = n(),
+    .groups = "drop"
+  )
+
+dat_env <- cond_monthly %>%
+  left_join(env_wide_rolling, by = c("year", "month"))
+
 
 plot_env_relationship <- function(v) {
   ggplot(dat_env, aes(x = .data[[v]], y = mean_Kn)) +
@@ -779,6 +823,61 @@ ggplot() +
     title = "Mixed-effects length-weight model predictions"
   ) +
   theme_bw()
+
+# -----------------------------
+# 1.11 ggpairs plots
+# -----------------------------
+
+# PDO
+dat_env %>%
+  select(
+    mean_log_Kn,
+    pdo_m_lag1,
+    pdo_m_prev3,
+    pdo_m_prev6
+  ) %>%
+  ggpairs()
+
+# NPGO
+dat_env %>%
+  select(
+    mean_log_Kn,
+    npgo_m_lag1,
+    npgo_m_prev3,
+    npgo_m_prev6
+  ) %>%
+  ggpairs()
+
+# ONI
+dat_env %>%
+  select(
+    mean_log_Kn,
+    oni_m_lag1,
+    oni_m_prev3,
+    oni_m_prev6
+  ) %>%
+  ggpairs()
+
+# NPI
+dat_env %>%
+  select(
+    mean_log_Kn,
+    npi_m_lag1,
+    npi_m_prev3,
+    npi_m_prev6
+  ) %>%
+  ggpairs()
+
+# one of each
+dat_env %>%
+  select(
+    mean_log_Kn,
+    pdo_m_prev3,
+    npgo_m_prev3,
+    oni_m_prev3,
+    npi_m_prev3
+  ) %>%
+  ggpairs()
 
 
 ##### -------------------------------------------------------------------- #####
@@ -866,11 +965,11 @@ priors_lw <- c(
     class = "b"
   ),
 
-  # Among-source variability
-  prior(
-    student_t(3, 0, 0.5),
-    class = "sd"
-  ),
+  # Among-source variability - not needed for simpler LW model
+  # prior(
+  #   student_t(3, 0, 0.5),
+  #   class = "sd"
+  # ),
 
   # Individual residual variability in log weight
   prior(
@@ -883,9 +982,7 @@ priors_lw
 
 get_prior(
   formula =
-    log_weight ~ log_length_c * Sex +
-    Month_f +
-    (1 | Source),
+    log_weight ~ log_length_c * Sex,
   data = lwa_bayes,
   family = gaussian()
 )
@@ -903,9 +1000,7 @@ get_prior(
 
 form_lw_bayes <- bf(
   log_weight ~
-    log_length_c * Sex +
-    Month_f +
-    (1 | Source)
+    log_length_c * Sex
 )
 
 m_lw_bayes <- brm(
@@ -1210,6 +1305,19 @@ make_monthly_condition_draws <- function(
 }
 
 
+# Separate All, US, and Can data here for monthly draws
+
+# filter only canada or us data
+filter_index <- unique(lwa_cond$Source)
+filter_index_can <- c("CAN_acoustic", "CAN_shoreside", "CAN_JV","CAN_polish", "Acoustic Canada")
+filter_index_us <- c("US_foreign", "US_JV", "US_shore", "US_acoustic", "US_atsea", "Acoustic U.S.")
+
+lwa_bayes_can <- lwa_bayes %>%
+  filter(Source %in% filter_index_can)
+
+lwa_bayes_us <- lwa_bayes %>%
+  filter(Source %in% filter_index_us)
+
 cond_monthly_draws <- make_monthly_condition_draws(
   model = m_lw_bayes,
   data = lwa_bayes,
@@ -1221,7 +1329,33 @@ cond_monthly_draws <- make_monthly_condition_draws(
   include_source_effect = TRUE
 )
 
+cond_monthly_draws_can<- make_monthly_condition_draws(
+  model = m_lw_bayes,
+  data = lwa_bayes_can,
+  ndraws = 500,
+  chunk_size = 10000,
+  seed = 1837,
+
+  # TRUE adjusts expected weight for systematic source differences.
+  include_source_effect = TRUE
+)
+
+cond_monthly_draws_us <- make_monthly_condition_draws(
+  model = m_lw_bayes,
+  data = lwa_bayes_us,
+  ndraws = 500,
+  chunk_size = 10000,
+  seed = 1837,
+
+  # TRUE adjusts expected weight for systematic source differences.
+  include_source_effect = TRUE
+)
+
+
+
 glimpse(cond_monthly_draws)
+glimpse(cond_monthly_draws_can)
+glimpse(cond_monthly_draws_us)
 
 
 
@@ -1522,7 +1656,29 @@ env_wide_clean <- env_wide_rolling %>%
   ) %>%
   arrange(year, month)
 
-cond_env_draws <- cond_monthly_draws %>%
+
+selected <- "all"
+selected <- "us"
+selected <- "can"
+
+if(selected == "all"){
+  cond_monthly_draws_used <- cond_monthly_draws
+
+} else {
+  if(selected == "us"){
+    cond_monthly_draws_used <- cond_monthly_draws_us
+
+  } else {
+    if(selected == "can"){
+      cond_monthly_draws_used <- cond_monthly_draws_can
+
+    } else {
+      rm(cond_monthly_draws_used)
+    }
+  }
+}
+
+cond_env_draws <- cond_monthly_draws_used %>%
   left_join(
     env_wide_clean,
     by = c("year", "month")
@@ -1655,98 +1811,98 @@ length(environment_data_list)
 # The environmental coefficient represents the effect of a
 # one-standard-deviation change in PDO.
 
-# modelling one env variable - pdo lag 1 month
-form_env_pdo <- bf(
-  mean_log_Kn ~
-    pdo_m_lag1_z +
-    month_f +
-    (1 | year_f)
-)
-
-# priors
-priors_env <- c(
-  prior(
-    normal(0, 0.1),
-    class = "Intercept"
-  ),
-  prior(
-    normal(0, 0.1),
-    class = "b"
-  ),
-  prior(
-    student_t(3, 0, 0.1),
-    class = "sd"
-  ),
-  prior(
-    student_t(3, 0, 0.1),
-    class = "sigma"
-  )
-)
-
-# run model
-m_env_pdo <- brm_multiple(
-  formula = form_env_pdo,
-  data = environment_data_list,
-  family = gaussian(),
-  prior = priors_env,
-
-  backend = "cmdstanr",
-  chains = 4,
-  iter = 2500,
-  warmup = 1250,
-  seed = 22,
-
-  control = list(
-    adapt_delta = 0.95,
-    max_treedepth = 12
-  ),
-
-  combine = TRUE
-)
-
-
-# inspect results
-summary(m_env_pdo)
-
-plot(m_env_pdo)
-
-pp_check(
-  m_env_pdo,
-  ndraws = 100,
-  type = "dens_overlay"
-)
-
-fixef(
-  m_env_pdo,
-  probs = c(0.025, 0.5, 0.975)
-)
-
-
-# extract environmental-effect posterior
-pdo_effect <- as_draws_df(m_env_pdo) %>%
-  transmute(
-    .draw,
-    beta_pdo = b_pdo_m_lag1_z,
-
-    # Multiplicative change in Kn for a one-SD increase in PDO
-    Kn_ratio = exp(beta_pdo)
-  )
-
-pdo_effect_summary <- pdo_effect %>%
-  summarise(
-    median_beta = median(beta_pdo),
-    lower_beta = quantile(beta_pdo, 0.025),
-    upper_beta = quantile(beta_pdo, 0.975),
-
-    median_Kn_ratio = median(Kn_ratio),
-    lower_Kn_ratio = quantile(Kn_ratio, 0.025),
-    upper_Kn_ratio = quantile(Kn_ratio, 0.975),
-
-    probability_positive = mean(beta_pdo > 0),
-    probability_negative = mean(beta_pdo < 0)
-  )
-
-pdo_effect_summary
+# # modelling one env variable - pdo lag 1 month
+# form_env_pdo <- bf(
+#   mean_log_Kn ~
+#     pdo_m_lag1_z +
+#     month_f +
+#     (1 | year_f)
+# )
+#
+# # priors
+# priors_env <- c(
+#   prior(
+#     normal(0, 0.1),
+#     class = "Intercept"
+#   ),
+#   prior(
+#     normal(0, 0.1),
+#     class = "b"
+#   ),
+#   prior(
+#     student_t(3, 0, 0.1),
+#     class = "sd"
+#   ),
+#   prior(
+#     student_t(3, 0, 0.1),
+#     class = "sigma"
+#   )
+# )
+#
+# # run model
+# m_env_pdo <- brm_multiple(
+#   formula = form_env_pdo,
+#   data = environment_data_list,
+#   family = gaussian(),
+#   prior = priors_env,
+#
+#   backend = "cmdstanr",
+#   chains = 4,
+#   iter = 2500,
+#   warmup = 1250,
+#   seed = 22,
+#
+#   control = list(
+#     adapt_delta = 0.95,
+#     max_treedepth = 12
+#   ),
+#
+#   combine = TRUE
+# )
+#
+#
+# # inspect results
+# summary(m_env_pdo)
+#
+# plot(m_env_pdo)
+#
+# pp_check(
+#   m_env_pdo,
+#   ndraws = 100,
+#   type = "dens_overlay"
+# )
+#
+# fixef(
+#   m_env_pdo,
+#   probs = c(0.025, 0.5, 0.975)
+# )
+#
+#
+# # extract environmental-effect posterior
+# pdo_effect <- as_draws_df(m_env_pdo) %>%
+#   transmute(
+#     .draw,
+#     beta_pdo = b_pdo_m_lag1_z,
+#
+#     # Multiplicative change in Kn for a one-SD increase in PDO
+#     Kn_ratio = exp(beta_pdo)
+#   )
+#
+# pdo_effect_summary <- pdo_effect %>%
+#   summarise(
+#     median_beta = median(beta_pdo),
+#     lower_beta = quantile(beta_pdo, 0.025),
+#     upper_beta = quantile(beta_pdo, 0.975),
+#
+#     median_Kn_ratio = median(Kn_ratio),
+#     lower_Kn_ratio = quantile(Kn_ratio, 0.025),
+#     upper_Kn_ratio = quantile(Kn_ratio, 0.975),
+#
+#     probability_positive = mean(beta_pdo > 0),
+#     probability_negative = mean(beta_pdo < 0)
+#   )
+#
+# pdo_effect_summary
 
 
 
@@ -1800,83 +1956,105 @@ fit_environment_model <- function(
 
     combine = TRUE,
 
-    file = model_file
+    file = model_file,
+    file_refit = "always"
     # file_refit = if (is.null(model_file)) NULL else "on_change"
   )
 }
+
+# priors
+priors_env <- c(
+  prior(
+    normal(0, 0.1),
+    class = "Intercept"
+  ),
+  prior(
+    normal(0, 0.1),
+    class = "b"
+  ),
+  prior(
+    student_t(3, 0, 0.1),
+    class = "sd"
+  ),
+  prior(
+    student_t(3, 0, 0.1),
+    class = "sigma"
+  )
+)
+
 
 # fit models
 env_models_bayes <- list(
   pdo_m_lag1 = fit_environment_model(
     variable = "pdo_m_lag1",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_pdo_m_lag1"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_pdo_m_lag1_", selected)
   ),
 
   npgo_m_lag1 = fit_environment_model(
     variable = "npgo_m_lag1",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_npgo_m_lag1"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_npgo_m_lag1_", selected)
   ),
 
   oni_m_lag1 = fit_environment_model(
     variable = "oni_m_lag1",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_oni_m_lag1"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_oni_m_lag1_", selected)
   ),
 
   npi_m_lag1 = fit_environment_model(
     variable = "npi_m_lag1",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_npi_m_lag1"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_npi_m_lag1_", selected)
   ),
 
   pdo_m_prev3 = fit_environment_model(
     variable = "pdo_m_prev3",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_pdo_m_prev3"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_pdo_m_prev3_", selected)
   ),
 
   npgo_m_prev3 = fit_environment_model(
     variable = "npgo_m_prev3",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_npgo_m_prev3"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_npgo_m_prev3_", selected)
   ),
 
   oni_m_prev3 = fit_environment_model(
     variable = "oni_m_prev3",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_oni_m_prev3"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_oni_m_prev3_", selected)
   ),
 
   npi_m_prev3 = fit_environment_model(
     variable = "npi_m_prev3",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_npi_m_prev3"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_npi_m_prev3_", selected)
   ),
 
   pdo_m_prev6 = fit_environment_model(
     variable = "pdo_m_prev6",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_pdo_m_prev6"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_pdo_m_prev6_", selected)
   ),
 
   npgo_m_prev6 = fit_environment_model(
     variable = "npgo_m_prev6",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_npgo_m_prev6"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_npgo_m_prev6_", selected)
   ),
 
   oni_m_prev6 = fit_environment_model(
     variable = "oni_m_prev6",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_oni_m_prev6"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_oni_m_prev6_", selected)
   ),
 
   npi_m_prev6 = fit_environment_model(
     variable = "npi_m_prev6",
     data_list = environment_data_list,
-    model_file = "stock-specific/hake/model-outputs/m_env_npi_m_prev6"
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_npi_m_prev6_", selected)
   )
 )
 
@@ -1928,22 +2106,22 @@ dir.create(
 
 saveRDS(
   cond_monthly_draws,
-  file = "stock-specific/hake/posterior-outputs/condition_monthly_posterior_draws.rds"
+  file = paste0("stock-specific/hake/posterior-outputs/condition_monthly_posterior_draws_", selected, ".rds")
 )
 
 saveRDS(
   cond_monthly_summary,
-  file = "stock-specific/hake/posterior-outputs/condition_monthly_posterior_summary.rds"
+  file = paste0("stock-specific/hake/posterior-outputs/condition_monthly_posterior_summary_", selected, ".rds")
 )
 
 saveRDS(
   env_scaling,
-  file = "stock-specific/hake/posterior-outputs/environment_covariate_scaling.rds"
+  file = paste0("stock-specific/hake/posterior-outputs/environment_covariate_scaling_", selected, ".rds")
 )
 
 write.csv(
   cond_monthly_summary,
-  file = "stock-specific/hake/posterior-outputs/condition_monthly_posterior_summary.csv",
+  file = paste0("stock-specific/hake/posterior-outputs/condition_monthly_posterior_summary_", selected, ".csv"),
   row.names = FALSE
 )
 
@@ -2618,6 +2796,9 @@ env_percent_change_plot
 # }
 
 
+### NEED TO REDO THIS SECTION
+
+
 
 ### START NEXT HERE (SKIP PREVIOUS)
 
@@ -3251,13 +3432,9 @@ bayesplot::mcmc_nuts_energy(
 )
 
 
-
 monthly_median_age_null_model$fit$cmdstan_diagnose()
 
 monthly_mean_age_null_model$fit$cmdstan_diagnose()
-
-
-
 
 
 # traceplots
@@ -3595,6 +3772,8 @@ ggplot(
 # -----------------------------
 # 5.1 Fit an annual median/mean age model
 # -----------------------------
+
+
 
 annual_median_age <- age_source_data %>%
   mutate(Age_yrs = as.numeric(as.character(Age_yrs))) %>%
@@ -3943,6 +4122,7 @@ annual_pdo_posterior_plot
 format_covariate <- function(dat, value.col, name) {
   dat %>%
     as_tibble()  %>%
+    filter(month %in% c(4,5,6)) %>% # only spring months
     group_by(year) %>%
     summarize(value = mean(.data[[value.col]])) %>%
     mutate(covariate = name)
@@ -3970,8 +4150,43 @@ env_long <- bind_rows(env_pdo, env_npgo, env_oni, env_bi, env_npi)
 env_wide <- env_long %>%
   pivot_wider(names_from = covariate, values_from = value)
 
+
+# filter only canada or us data
+filter_index <- unique(lwa_cond$Source)
+filter_index_can <- c("CAN_acoustic", "CAN_shoreside", "CAN_JV","CAN_polish", "Acoustic Canada")
+filter_index_us <- c("US_foreign", "US_JV", "US_shore", "US_acoustic", "US_atsea", "Acoustic U.S.")
+
+lwa_cond_can <- lwa_cond %>%
+  filter(Source %in% filter_index_can)
+
+lwa_cond_us <- lwa_cond %>%
+  filter(Source %in% filter_index_us)
+
+
+## select which option
+selected <- "all"
+# selected <- "us"
+# selected <- "can"
+
+if(selected == "all"){
+  lwa_env <- lwa_cond
+
+} else {
+  if(selected == "us"){
+    lwa_env <- lwa_cond_us
+
+  } else {
+    if(selected == "can"){
+      lwa_env <- lwa_cond_can
+
+    } else {
+      rm(lwa_env)
+    }
+  }
+}
+
 # join env data with condition data
-lwa_env <- lwa_cond %>%
+lwa_env <- lwa_env %>%
   mutate(
     year = as.integer(as.character(year)),
     month = as.integer(as.character(month))
@@ -4204,6 +4419,16 @@ annual_age_env <- annual_median_age %>%
     log_n_fish = log(n_fish)
   ) %>%
   arrange(Year)
+
+
+# correlation plots
+annual_median_age %>%
+  select(mean_age, pdo_annual_same, npgo_annual_same, oni_annual_same, bi_annual_same, npi_annual_same) %>%
+  ggpairs()
+
+annual_median_age %>%
+  select(mean_age, pdo_annual_prior, npgo_annual_prior, oni_annual_prior, bi_annual_prior, npi_annual_prior) %>%
+  ggpairs()
 
 # -----------------------------
 # 6.3 function to fit annual environmental model
