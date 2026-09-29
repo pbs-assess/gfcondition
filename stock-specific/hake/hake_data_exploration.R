@@ -1,17 +1,20 @@
 
 
 
-##### Hake exploration
+#####
 #
+# Hake exploration
 #
-#
-
+# Conducting an analysis with Hake data from the Hake survey GitHub repository.
+# First using length-weight data to define a relationship for males and females across all the data
+# Then using the observed over expected weight to create a body condition index. This can then be used to
+#  evaluate the effect of envrionmental covariates on body condition
+# Hopefully these results shed light on the correlation between environmental indicators
+#  and mean age - the plots that Rebecca Thomas showed that initiated this project.
 
 # load packages
 library(devtools)
-
 load_all()
-
 
 library(tidyverse)
 library(glmmTMB)
@@ -25,14 +28,11 @@ library(slider)
 library(GGally)
 
 
-
-
 # Read in data
 
 # US Hake weight-at-age data
 # only has US at sea and US shore Source data
 # has data from 1965 to 2025
-
 us_dat <- read.csv("https://raw.githubusercontent.com/pacific-hake/hake-assessment/refs/heads/master/data-tables/us-weight-at-age.csv", header = TRUE)
 
 str(us_dat)
@@ -40,12 +40,9 @@ head(us_dat)
 unique(us_dat$Source)
 unique(us_dat$Year)
 
-
-
 # length weight age data
 # Has numerous sources
 # has data from 1975 to 2021
-
 lwa_dat <- read.csv("https://raw.githubusercontent.com/pacific-hake/hake-assessment/refs/heads/master/data-tables/length-weight-age/LWAdata_1975to2021.csv", header = TRUE)
 
 str(lwa_dat)
@@ -53,12 +50,9 @@ head(lwa_dat)
 unique(lwa_dat$Source)
 unique(lwa_dat$Year)
 
-
-
 # acoustic survey weight at age
 # US and Can Acoustic sources
 # 1995 to 2025, every 2-3 years
-
 ac_dat <- read.csv("https://raw.githubusercontent.com/pacific-hake/hake-assessment/refs/heads/master/data-tables/survey-weight-at-age.csv", header = TRUE)
 
 str(ac_dat)
@@ -67,9 +61,10 @@ unique(ac_dat$Source)
 unique(ac_dat$Year)
 
 
+# Biomass at age
+#  Age is in columns, and the values represent the total biomass at each age
 # github directory
 git_dir <- "C:/github/hakeanalysis/data/"
-
 
 # canada survey data
 can.dat <- read.csv(paste0(git_dir, "Survey_Biomass_at_age_Canada.csv"), header = TRUE)
@@ -77,29 +72,34 @@ can.dat <- read.csv(paste0(git_dir, "Survey_Biomass_at_age_Canada.csv"), header 
 # california survey data
 cal.dat <- read.csv(paste0(git_dir, "Survey_Biomass_at_age_California.csv"), header = TRUE)
 
-# canada survey data
+# oregon survey data
 ore.dat <- read.csv(paste0(git_dir, "Survey_Biomass_at_age_Oregon.csv"), header = TRUE)
 
-# canada survey data
+# total survey data
 tot.dat <- read.csv(paste0(git_dir, "Survey_Biomass_at_Age_Total.csv"), header = TRUE)
 
+str(can.dat)
+str(cal.dat)
+str(ore.dat)
+str(tot.dat)
 
-head(can.dat)
 
 
-
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
 
 ##### Calculate le cren's body condition
 
-
-
 # Length-weight mixed effects analysis + Le Cren condition + pacea covariates
-
 
 # -----------------------------
 # 1.1 Clean data
 # -----------------------------
 
+# currently using the length weight data that seems to have the most data (a combination of the other datasets
 lwa <- lwa_dat %>%
   filter(
     !outlierL,
@@ -124,6 +124,7 @@ lwa <- lwa_dat %>%
 # 1.2 Exploratory plots
 # -----------------------------
 
+# length weight relationship by sex
 p_lw <- ggplot(lwa, aes(Length_cm, Weight_kg)) +
   geom_point(alpha = 0.08, size = 0.5) +
   geom_smooth(method = "lm", formula = y ~ x, se = TRUE) +
@@ -138,6 +139,7 @@ p_lw <- ggplot(lwa, aes(Length_cm, Weight_kg)) +
   theme_bw()
 p_lw
 
+# length weight by age
 p_age <- ggplot(lwa, aes(Length_cm, Weight_kg, colour = Age_yrs)) +
   geom_point(alpha = 0.08, size = 0.5) +
   geom_smooth(method = "lm", formula = y ~ x, se = FALSE) +
@@ -152,6 +154,7 @@ p_age <- ggplot(lwa, aes(Length_cm, Weight_kg, colour = Age_yrs)) +
   theme_bw()
 p_age
 
+# both in same plot
 p_lw / p_age
 
 
@@ -316,7 +319,7 @@ m_lw6.1 <- glmmTMB(
   )
 )
 
-##
+## USE THIS
 # simplest
 m_lw7.1 <- glmmTMB(
   log_weight ~ log_length * Sex
@@ -328,13 +331,16 @@ m_lw7.1 <- glmmTMB(
   )
 )
 
-
+# comparing models
 AIC(m_lw1.1, m_lw1.2, m_lw2.1, m_lw2.2,
     m_lw3.1, m_lw3.2, m_lw4.1, m_lw4.2,
     m_lw5.1, m_lw5.2, m_lw6.1, m_lw7.1
     )
 
 anova(m_lw1.1, m_lw2.1, m_lw3.1, m_lw5.1, m_lw7.1)
+
+# Even though we get a better fit with more complex models, we just want the length-weight model parameters
+#  so we stick with the simple model, with sex as the only factor.
 
 # selected model - simple one for lw model
 m_lw_selected <- m_lw7.1
