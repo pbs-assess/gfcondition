@@ -157,6 +157,7 @@ p_age
 # both in same plot
 p_lw / p_age
 
+rm(p_lw,p_age)
 
 # -----------------------------
 # 1.3 Mixed effects length-weight model
@@ -339,6 +340,9 @@ AIC(m_lw1.1, m_lw1.2, m_lw2.1, m_lw2.2,
 
 anova(m_lw1.1, m_lw2.1, m_lw3.1, m_lw5.1, m_lw7.1)
 
+rm(m_lw1.1,m_lw1.2,m_lw2.1,m_lw2.2,m_lw3.1,m_lw3.2,m_lw4.1,m_lw4.2,m_lw5.1,m_lw5.2,m_lw6.1)
+gc()
+
 # Even though we get a better fit with more complex models, we just want the length-weight model parameters
 #  so we stick with the simple model, with sex as the only factor.
 
@@ -423,15 +427,21 @@ p_kn_time_med <- lwa_cond %>%
   ) +
   theme_bw()
 
+# distribution historgram of body condition
 p_kn_hist
 
-p_kn_time /p_kn_time_med
+# mean body condition over time by month
+p_kn_time
+# p_kn_time_med # median condition over time by month
 
+rm(p_kn_hist, p_kn_time, p_kn_time_med)
+gc()
 
 # -----------------------------
 # 1.5 Prepare monthly condition index
 # -----------------------------
 
+# predict the expected weight and estimate condition
 lwa_cond <- lwa %>%
   mutate(
     log_weight_hat = predict(m_lw_selected, type = "response"),
@@ -442,6 +452,7 @@ lwa_cond <- lwa %>%
     month = as.integer(as.character(Month))
   )
 
+# summarize condition by month
 cond_monthly <- lwa_cond %>%
   group_by(year, month) %>%
   summarise(
@@ -454,6 +465,7 @@ cond_monthly <- lwa_cond %>%
     .groups = "drop"
   )
 
+# summarize condition by year
 cond_annual <- lwa_cond %>%
   group_by(year) %>%
   summarise(
@@ -472,38 +484,10 @@ cond_annual <- lwa_cond %>%
 # 1.6 Add environmental covariates from pacea
 # -----------------------------
 
+# list of pacea indices
 pacea_indices
 
-# ## option 1 - annual covariate - not doing
-# format_covariate <- function(dat, value.col, name) {
-#   dat %>%
-#     as_tibble()  %>%
-#     group_by(year) %>%
-#     summarize(value = mean(.data[[value.col]])) %>%
-#     mutate(covariate = name)
-# }
-#
-# # Get environmental covariates
-# env_pdo <- format_covariate(pdo, "anomaly", "pdo")
-# env_npgo <- format_covariate(npgo, "anomaly", "npgo")
-# env_oni <- format_covariate(oni, "anomaly", "oni")
-# env_bi <- pacea::bi %>%
-#   mutate(value = anomaly,
-#          covariate = "bi")  %>%
-#   select(year, value, covariate)
-#
-# env_long <- bind_rows(env_pdo, env_npgo, env_oni, env_bi)
-#
-# env_wide <- env_long %>%
-#   pivot_wider(names_from = covariate, values_from = value)
-#
-# dat_env <- cond_monthly %>%
-#   left_join(env_wide, by = c("year"))
-
-
-#####
-## option 2 - monthly covariates with 1 month lag
-
+# function for formatting covariates from pacea
 format_covariate_month <- function(dat, value.col, name) {
   dat %>%
     as_tibble()  %>%
@@ -513,53 +497,19 @@ format_covariate_month <- function(dat, value.col, name) {
 }
 
 # Get environmental covariates
-env_pdo <- format_covariate_month(pdo, "anomaly", "pdo_m_lag1")
-env_npgo <- format_covariate_month(npgo, "anomaly", "npgo_m_lag1")
-env_oni <- format_covariate_month(oni, "anomaly", "oni_m_lag1")
-env_npi <- format_covariate_month(npi_monthly , "value", "npi_m_lag1")
-
-
-env_long <- bind_rows(env_pdo, env_npgo, env_oni, env_npi)
-
-
-# add in month lag
-lag_months <- 1
-env_long <- env_long %>%
-  mutate(month = month + lag_months) %>%
-  mutate(year = case_when(month > 12 ~ year + 1,
-                          .default = year),
-         month = case_when(month > 12 ~ (month - 12),
-                           .default = month))
-
-# make data wide
-env_wide <- env_long %>%
-  pivot_wider(names_from = covariate, values_from = value)
-
-dat_env <- cond_monthly %>%
-  left_join(env_wide, by = c("year", "month"))
-
-
-#####
-## option 2 - seasonal covariates of previous 1, 3, and 6 months - combined into one data set
-
-format_covariate_month <- function(dat, value.col, name) {
-  dat %>%
-    as_tibble()  %>%
-    group_by(year, month) %>%
-    summarize(value = mean(.data[[value.col]])) %>%
-    mutate(covariate = name)
-}
-
-# Get environmental covariates
-env_pdo <- format_covariate_month(pdo, "anomaly", "pdo_m_lag1")
-env_npgo <- format_covariate_month(npgo, "anomaly", "npgo_m_lag1")
-env_oni <- format_covariate_month(oni, "anomaly", "oni_m_lag1")
-env_npi <- format_covariate_month(npi_monthly , "value", "npi_m_lag1")
+env_pdo <- format_covariate_month(pdo, "anomaly", "pdo_m_prev1")
+env_npgo <- format_covariate_month(npgo, "anomaly", "npgo_m_prev1")
+env_oni <- format_covariate_month(oni, "anomaly", "oni_m_prev1")
+env_npi <- format_covariate_month(npi_monthly , "value", "npi_m_prev1")
+env_mei <- format_covariate_month(mei , "anomaly", "mei_m_prev1")
 
 # combine variables
-env_long <- bind_rows(env_pdo, env_npgo, env_oni, env_npi)
+env_long <- bind_rows(env_pdo, env_npgo, env_oni, env_npi, env_mei)
 
-# estimate lag 1 variables first
+##
+# seasonal covariates of previous 1, 3, and 6 months - combined into one data set
+
+# estimate prev 1 variables first
 lag_months <- 1
 env_long <- env_long %>%
   mutate(month = month + lag_months) %>%
@@ -575,10 +525,11 @@ env_wide <- env_long %>%
 
 # use lag 1 variable names to then find the average across 3 and 6 months
 lag1_vars <- c(
-  "pdo_m_lag1",
-  "npgo_m_lag1",
-  "oni_m_lag1",
-  "npi_m_lag1"
+  "pdo_m_prev1",
+  "npgo_m_prev1",
+  "oni_m_prev1",
+  "npi_m_prev1",
+  "mei_m_prev1"
 )
 
 env_wide_rolling <- env_wide %>%
@@ -628,14 +579,12 @@ env_wide_rolling <- env_wide %>%
           .complete = TRUE
         )
       ),
-      .names = "{sub('_m_lag1$', '', .col)}_m_{.fn}"
+      .names = "{sub('_m_prev1$', '', .col)}_m_{.fn}"
     )
   )
 
-
 dat_env <- cond_monthly %>%
   left_join(env_wide_rolling, by = c("year", "month"))
-
 
 # -----------------------------
 # 1.7 Correlations with environmental covariates
@@ -643,19 +592,21 @@ dat_env <- cond_monthly %>%
 
 # Names of dat_env environmental data columns:
 env_vars <- c(
-  "pdo_m_lag1",
-  "npgo_m_lag1",
-  "oni_m_lag1",
-  "npi_m_lag1",
+  "pdo_m_prev1",
+  "npgo_m_prev1",
+  "oni_m_prev1",
+  "npi_m_prev1",
+  "mei_m_prev1",
   "pdo_m_prev3",
   "npgo_m_prev3",
   "oni_m_prev3",
   "npi_m_prev3",
+  "mei_m_prev3",
   "pdo_m_prev6",
   "npgo_m_prev6",
   "oni_m_prev6",
-  "npi_m_prev6"
-  # , "bi"
+  "npi_m_prev6",
+  "mei_m_prev6"
 )
 
 # correlations of environmental variables with mean body condition
@@ -677,7 +628,11 @@ cor_results <- map_dfr(env_vars, function(v) {
 }) %>%
   mutate(p_adj = p.adjust(p_value, method = "BH"))
 
+# print correlation results
 cor_results
+
+# correlation plot of mean condition for previous 3 months only
+ggpairs(dat_env %>% select(mean_Kn, contains("prev3")))
 
 
 # -----------------------------
@@ -686,16 +641,36 @@ cor_results
 
 # filter only canada or us data
 filter_index <- unique(lwa_cond$Source)
-filter_index <- c("CAN_acoustic", "CAN_shoreside", "CAN_JV","CAN_polish", "Acoustic Canada")
-filter_index <- c("US_foreign", "US_JV", "US_shore", "US_acoustic", "US_atsea", "Acoustic U.S.")
+filter_index_can <- c("CAN_acoustic", "CAN_shoreside", "CAN_JV","CAN_polish", "Acoustic Canada")
+filter_index_us <- c("US_foreign", "US_JV", "US_shore", "US_acoustic", "US_atsea", "Acoustic U.S.")
 
-lwa_env <- lwa_cond %>%
-  filter(Source %in% filter_index)
+# selected data
+selected <- "all"
+selected <- "us"
+selected <- "can"
 
+if(selected == "all"){
+  lwa_env <- lwa_cond %>%
+    filter(Source %in% filter_index)
+
+} else {
+  if(selected == "us"){
+    lwa_env <- lwa_cond %>%
+      filter(Source %in% filter_index_us)
+
+  } else {
+    if(selected == "can"){
+      lwa_env <- lwa_cond %>%
+        filter(Source %in% filter_index_can)
+
+    } else {
+      rm(lwa_env)
+    }
+  }
+}
 
 # Fish-level model: body condition as response.
 # Environmental covariates joined to each fish by Year-Month.
-
 lwa_env <- lwa_env %>%
   mutate(
     year = as.integer(as.character(year)),
@@ -776,7 +751,7 @@ plot_env_relationship <- function(v) {
       x = v,
       y = "Monthly mean Kn",
       size = "n fish",
-      title = paste("Body condition vs", v)
+      title = paste("Body condition vs", v, "-", selected, "data")
     ) +
     theme_bw()
 }
@@ -784,6 +759,8 @@ plot_env_relationship <- function(v) {
 env_plots <- map(env_vars, plot_env_relationship)
 
 wrap_plots(env_plots)
+
+rm(env_plots)
 
 
 # -----------------------------
@@ -802,6 +779,7 @@ pred_lw <- ggpredict(
     conf.high = exp(conf.high)
   )
 
+# model fitted lines for male and female length-weight relationship
 ggplot() +
   geom_point(
     data = lwa,
@@ -829,61 +807,6 @@ ggplot() +
     title = "Mixed-effects length-weight model predictions"
   ) +
   theme_bw()
-
-# -----------------------------
-# 1.11 ggpairs plots
-# -----------------------------
-
-# PDO
-dat_env %>%
-  select(
-    mean_log_Kn,
-    pdo_m_lag1,
-    pdo_m_prev3,
-    pdo_m_prev6
-  ) %>%
-  ggpairs()
-
-# NPGO
-dat_env %>%
-  select(
-    mean_log_Kn,
-    npgo_m_lag1,
-    npgo_m_prev3,
-    npgo_m_prev6
-  ) %>%
-  ggpairs()
-
-# ONI
-dat_env %>%
-  select(
-    mean_log_Kn,
-    oni_m_lag1,
-    oni_m_prev3,
-    oni_m_prev6
-  ) %>%
-  ggpairs()
-
-# NPI
-dat_env %>%
-  select(
-    mean_log_Kn,
-    npi_m_lag1,
-    npi_m_prev3,
-    npi_m_prev6
-  ) %>%
-  ggpairs()
-
-# one of each
-dat_env %>%
-  select(
-    mean_log_Kn,
-    pdo_m_prev3,
-    npgo_m_prev3,
-    oni_m_prev3,
-    npi_m_prev3
-  ) %>%
-  ggpairs()
 
 
 ##### -------------------------------------------------------------------- #####
@@ -1041,19 +964,21 @@ summary(m_lw_bayes)
 
 plot(m_lw_bayes)
 
+# These take a while to run so skipping these
+
 # show density distribution of posterior predictions with observed data
-pp_check(
-  m_lw_bayes,
-  ndraws = 100,
-  type = "dens_overlay"
-)
+# pp_check(
+#   m_lw_bayes,
+#   ndraws = 100,
+#   type = "dens_overlay"
+# )
 
 # compare observed vs predicted as scatter plot
-pp_check(
-  m_lw_bayes,
-  ndraws = 100,
-  type = "scatter_avg"
-)
+# pp_check(
+#   m_lw_bayes,
+#   ndraws = 100,
+#   type = "scatter_avg"
+# )
 
 # variation explained by model
 r2_lw <- bayes_R2(
@@ -1065,7 +990,6 @@ r2_lw
 
 # Fixed-effect posterior summaries
 fixef(m_lw_bayes, probs = c(0.025, 0.5, 0.975))
-
 
 # -----------------------------
 # Sex-specific length slopes
@@ -1085,7 +1009,7 @@ variables(lw_coef_draws)[
   )
 ]
 
-# getting slope estimates (and distirbution) for each sex
+# getting slope estimates (and distirbution) for each sex from bayesian draws
 slope_draws <- lw_coef_draws %>%
   transmute(
     .draw,
@@ -1093,6 +1017,7 @@ slope_draws <- lw_coef_draws %>%
     slope_M = b_log_length_c + `b_log_length_c:SexM`
   )
 
+# summarizing them
 slope_summary <- slope_draws %>%
   pivot_longer(
     cols = starts_with("slope_"),
@@ -1109,16 +1034,14 @@ slope_summary <- slope_draws %>%
     .groups = "drop"
   )
 
+# print slope summary
 slope_summary
-
 
 # -----------------------------
 # 2.6 Construct posterior draws of monthly condition
 # -----------------------------
 
-
 # function to extract posterior distribution of monthly condition
-
 make_monthly_condition_draws <- function(
     model,
     data,
@@ -1357,12 +1280,9 @@ cond_monthly_draws_us <- make_monthly_condition_draws(
   include_source_effect = TRUE
 )
 
-
-
 glimpse(cond_monthly_draws)
 glimpse(cond_monthly_draws_can)
 glimpse(cond_monthly_draws_us)
-
 
 
 # -----------------------------
@@ -1394,7 +1314,6 @@ cond_monthly_summary
 
 
 # plot monthly posterior condition index
-
 ggplot(
   cond_monthly_summary,
   aes(
@@ -1427,9 +1346,7 @@ ggplot(
   ) +
   theme_bw()
 
-
 # seasonal patterns
-
 ggplot(
   cond_monthly_summary,
   aes(
@@ -1534,7 +1451,9 @@ fish_condition_summary <- fish_condition_draws %>%
     Kn_upper = quantile(Kn, 0.975),
     log_Kn = median(log_Kn),
     .groups = "drop"
-  )
+  ) %>%
+  arrange(year, month) %>%
+  mutate(date = lubridate::make_date(year = year, month = month, day = 1))
 
 # plot fish size and median body condition from posterior distribution
 ggplot(
@@ -1567,6 +1486,7 @@ ggplot(
   ) +
   theme_classic()
 
+# log condition
 ggplot(
   fish_condition_summary,
   aes(x = Length_cm, y = log_Kn, colour = Sex)
@@ -1580,8 +1500,7 @@ ggplot(
   geom_hline(yintercept = 0, linetype = "dashed") +
   theme_classic()
 
-
-# check effects of sex
+# check effects of sex on overall body condition
 ggplot(
   fish_condition_summary,
   aes(x = Sex, y = Kn)
@@ -1614,6 +1533,18 @@ ggplot(
     y = "Relative condition (Kn)"
   ) +
   theme_classic()
+
+# check effects of sex and condition over time
+ggplot(
+  fish_condition_summary,
+  aes(x = date, y = Kn, col = Sex)
+) +
+  geom_point(alpha = 0.15) +
+  geom_smooth(
+    method = "gam",
+    formula = y ~ s(x),
+    se = TRUE
+  )
 
 # check effects of source
 ggplot(
@@ -1696,19 +1627,21 @@ glimpse(cond_env_draws)
 
 # List env variables to use in analysis
 env_vars <- c(
-  "pdo_m_lag1",
-  "npgo_m_lag1",
-  "oni_m_lag1",
-  "npi_m_lag1",
+  "pdo_m_prev1",
+  "npgo_m_prev1",
+  "oni_m_prev1",
+  "npi_m_prev1",
+  "mei_m_prev1",
   "pdo_m_prev3",
   "npgo_m_prev3",
   "oni_m_prev3",
   "npi_m_prev3",
+  "mei_m_prev3",
   "pdo_m_prev6",
   "npgo_m_prev6",
   "oni_m_prev6",
-  "npi_m_prev6"
-  # , "bi"
+  "npi_m_prev6",
+  "mei_m_prev6"
 )
 
 # scale environmental variables
@@ -1743,8 +1676,6 @@ for (v in env_vars) {
       scaling_table = env_scaling
     )
 }
-
-
 
 # -----------------------------
 # 3.2 Create posterior-imputed datasets
@@ -1796,8 +1727,7 @@ environment_data_list <- selected_condition_draws$.draw_index %>%
         ends_with("_z")
       ) %>%
       drop_na(
-        mean_log_Kn,
-        pdo_m_lag1_z
+        mean_log_Kn
       )
   })
 
@@ -1991,28 +1921,28 @@ priors_env <- c(
 
 # fit models
 env_models_bayes <- list(
-  pdo_m_lag1 = fit_environment_model(
-    variable = "pdo_m_lag1",
+  pdo_m_prev1 = fit_environment_model(
+    variable = "pdo_m_prev1",
     data_list = environment_data_list,
-    model_file = paste0("stock-specific/hake/model-outputs/m_env_pdo_m_lag1_", selected)
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_pdo_m_prev1_", selected)
   ),
 
-  npgo_m_lag1 = fit_environment_model(
-    variable = "npgo_m_lag1",
+  npgo_m_prev1 = fit_environment_model(
+    variable = "npgo_m_prev1",
     data_list = environment_data_list,
-    model_file = paste0("stock-specific/hake/model-outputs/m_env_npgo_m_lag1_", selected)
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_npgo_m_prev1_", selected)
   ),
 
-  oni_m_lag1 = fit_environment_model(
-    variable = "oni_m_lag1",
+  oni_m_prev1 = fit_environment_model(
+    variable = "oni_m_prev1",
     data_list = environment_data_list,
-    model_file = paste0("stock-specific/hake/model-outputs/m_env_oni_m_lag1_", selected)
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_oni_m_prev1_", selected)
   ),
 
-  npi_m_lag1 = fit_environment_model(
-    variable = "npi_m_lag1",
+  npi_m_prev1 = fit_environment_model(
+    variable = "npi_m_prev1",
     data_list = environment_data_list,
-    model_file = paste0("stock-specific/hake/model-outputs/m_env_npi_m_lag1_", selected)
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_npi_m_prev1_", selected)
   ),
 
   pdo_m_prev3 = fit_environment_model(
@@ -2065,7 +1995,68 @@ env_models_bayes <- list(
 )
 
 
+env_models_bayes_sub <- list(
+  mei_m_prev1 = fit_environment_model(
+    variable = "mei_m_prev1",
+    data_list = environment_data_list,
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_mei_m_prev1_", selected)
+  ),
+
+  mei_m_prev3 = fit_environment_model(
+    variable = "mei_m_prev3",
+    data_list = environment_data_list,
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_mei_m_prev3_", selected)
+  ),
+
+  mei_m_prev6 = fit_environment_model(
+    variable = "mei_m_prev6",
+    data_list = environment_data_list,
+    model_file = paste0("stock-specific/hake/model-outputs/m_env_mei_m_prev6_", selected)
+  )
+)
+
+length(env_models_bayes)
+length(env_models_bayes_sub)
+
+# combine initial and extra analysis
+# env_models_bayes <- c(env_models_bayes, env_models_bayes_sub)
+# rm(env_models_bayes_sub)
+
 # summarize
+
+# slow try below before deleting
+# env_effect_summary <- imap_dfr(
+#   env_models_bayes,
+#   function(model, variable) {
+#
+#     coefficient_name <- paste0(
+#       "b_",
+#       variable,
+#       "_z"
+#     )
+#
+#     model_draws <- as_draws_df(model)
+#
+#     beta <- model_draws[[coefficient_name]]
+#
+#     tibble(
+#       covariate = variable,
+#
+#       median_beta = median(beta),
+#       lower_beta = quantile(beta, 0.025),
+#       upper_beta = quantile(beta, 0.975),
+#
+#       median_Kn_ratio = median(exp(beta)),
+#       lower_Kn_ratio = quantile(exp(beta), 0.025),
+#       upper_Kn_ratio = quantile(exp(beta), 0.975),
+#
+#       probability_positive = mean(beta > 0),
+#       probability_negative = mean(beta < 0)
+#     )
+#   }
+# )
+
+
 env_effect_summary <- imap_dfr(
   env_models_bayes,
   function(model, variable) {
@@ -2076,9 +2067,12 @@ env_effect_summary <- imap_dfr(
       "_z"
     )
 
-    model_draws <- as_draws_df(model)
+    beta <- as_draws_matrix(
+      model,
+      variable = coefficient_name
+    )[, coefficient_name]
 
-    beta <- model_draws[[coefficient_name]]
+    beta_exp <- exp(beta)
 
     tibble(
       covariate = variable,
@@ -2087,9 +2081,9 @@ env_effect_summary <- imap_dfr(
       lower_beta = quantile(beta, 0.025),
       upper_beta = quantile(beta, 0.975),
 
-      median_Kn_ratio = median(exp(beta)),
-      lower_Kn_ratio = quantile(exp(beta), 0.025),
-      upper_Kn_ratio = quantile(exp(beta), 0.975),
+      median_Kn_ratio = median(beta_exp),
+      lower_Kn_ratio = quantile(beta_exp, 0.025),
+      upper_Kn_ratio = quantile(beta_exp, 0.975),
 
       probability_positive = mean(beta > 0),
       probability_negative = mean(beta < 0)
@@ -2135,6 +2129,7 @@ write.csv(
 # -----------------------------
 # 3.6 Plot posterior outputs
 # -----------------------------
+
 library(brms)
 library(dplyr)
 library(purrr)
@@ -2143,137 +2138,106 @@ library(ggplot2)
 library(ggdist)
 library(tibble)
 
+# plot individual env variable posterior
 plot_env_posterior <- function(model, variable) {
 
-  # Extract unsummarized fixed-effect posterior draws
-  fixed_draws <- fixef(
+  coefficient_name <- paste0(
+    "b_",
+    variable,
+    "_z"
+  )
+
+  beta <- posterior::as_draws_matrix(
     model,
-    summary = FALSE
+    variable = coefficient_name
+  )[, coefficient_name]
+
+  beta <- as.numeric(beta)
+
+  posterior_data <- tibble::tibble(
+    beta = beta
   )
 
-  # Find the environmental coefficient in this model
-  coefficient_name <- colnames(fixed_draws) |>
-    keep(
-      \(x) grepl(
-        pattern = "^(pdo|npgo|oni|npi)",
-        x = x,
-        ignore.case = TRUE
-      )
-    )
-
-  # Confirm that exactly one environmental coefficient was found
-  if (length(coefficient_name) != 1L) {
-    stop(
-      paste0(
-        "Expected one environmental coefficient in model '",
-        variable,
-        "', but found ",
-        length(coefficient_name),
-        ": ",
-        paste(coefficient_name, collapse = ", ")
-      ),
-      call. = FALSE
-    )
-  }
-
-  # Extract posterior draws
-  posterior_data <- tibble(
-    beta = fixed_draws[, coefficient_name]
-  )
-
-  # Create a cleaner label
   variable_label <- variable |>
-    gsub("_m_lag1$", ": previous month", x = _) |>
+    gsub("_m_prev1$", ": previous month", x = _) |>
     gsub("_m_prev3$", ": previous 3 months", x = _) |>
     gsub("_m_prev6$", ": previous 6 months", x = _) |>
     toupper()
 
-  ggplot(
+  ggplot2::ggplot(
     posterior_data,
-    aes(x = beta, y = variable_label)
+    ggplot2::aes(
+      x = beta,
+      y = variable_label
+    )
   ) +
-    stat_halfeye(
+    ggdist::stat_halfeye(
       .width = c(0.50, 0.80, 0.95),
-      point_interval = median_qi,
+      point_interval = ggdist::median_qi,
       normalize = "groups"
     ) +
-    geom_vline(
+    ggplot2::geom_vline(
       xintercept = 0,
       linetype = "dashed",
       linewidth = 0.6
     ) +
-    labs(
-      title = paste("Posterior effect of", variable_label),
+    ggplot2::labs(
+      title = paste(
+        "Posterior effect of",
+        variable_label
+      ),
       subtitle = paste(
         "Coefficient:",
         coefficient_name
       ),
-      x = expression(beta ~ "(change in log condition per 1 SD)"),
+      x = expression(
+        beta ~ "(change in log condition per 1 SD)"
+      ),
       y = NULL
     ) +
-    theme_classic(base_size = 12)
+    ggplot2::theme_classic(
+      base_size = 12
+    )
 }
 
 plot_env_posterior(
-  model = env_models_bayes[["pdo_m_lag1"]],
-  variable = "pdo_m_lag1"
-)
-
-# all plots in an object
-env_posterior_plots <- imap(
-  env_models_bayes,
-  \(model, variable) {
-    plot_env_posterior(
-      model = model,
-      variable = variable
-    )
-  }
-)
-
-# plot each one separately
-walk(
-  env_posterior_plots,
-  print
+  model = env_models_bayes[["pdo_m_prev1"]],
+  variable = "pdo_m_prev1"
 )
 
 # all plots in facet
 extract_env_posterior <- function(model, variable) {
 
-  fixed_draws <- fixef(
-    model,
-    summary = FALSE
+  coefficient_name <- paste0(
+    "b_",
+    variable,
+    "_z"
   )
 
-  coefficient_name <- colnames(fixed_draws) |>
-    keep(
-      \(x) grepl(
-        pattern = "^(pdo|npgo|oni|npi)",
-        x = x,
-        ignore.case = TRUE
-      )
-    )
+  draws <- posterior::as_draws_matrix(
+    model,
+    variable = coefficient_name
+  )
 
-  if (length(coefficient_name) != 1L) {
+  if (ncol(draws) != 1L) {
     stop(
       paste0(
-        "Expected one environmental coefficient in model '",
+        "Expected coefficient '",
+        coefficient_name,
+        "' in model '",
         variable,
-        "', but found ",
-        length(coefficient_name),
-        ": ",
-        paste(coefficient_name, collapse = ", ")
+        "', but it was not found uniquely."
       ),
       call. = FALSE
     )
   }
 
-  tibble(
+  tibble::tibble(
     model = variable,
     coefficient = coefficient_name,
-    beta = fixed_draws[, coefficient_name]
+    beta = as.numeric(draws[, 1])
   )
 }
-
 
 env_posterior_draws <- imap_dfr(
   env_models_bayes,
@@ -2292,11 +2256,12 @@ env_posterior_draws <- env_posterior_draws %>%
       grepl("^npgo", model) ~ "NPGO",
       grepl("^oni", model)  ~ "ONI",
       grepl("^npi", model)  ~ "NPI",
+      grepl("^mei", model)  ~ "MEI",
       TRUE                  ~ model
     ),
 
     exposure_window = case_when(
-      grepl("_lag1$", model)  ~ "Previous month",
+      grepl("_prev1$", model) ~ "Previous month",
       grepl("_prev3$", model) ~ "Previous 3 months",
       grepl("_prev6$", model) ~ "Previous 6 months",
       TRUE                    ~ "Other"
@@ -2313,10 +2278,9 @@ env_posterior_draws <- env_posterior_draws %>%
 
     index = factor(
       index,
-      levels = c("PDO", "NPGO", "ONI", "NPI")
+      levels = c("PDO", "NPGO", "ONI", "NPI", "MEI")
     )
   )
-
 
 env_posterior_combined_plot <- ggplot(
   env_posterior_draws,
@@ -2402,418 +2366,123 @@ env_percent_change_plot <- ggplot(
 
 env_percent_change_plot
 
+# funtion to plot linear relationship
+plot_env_linear <- function(
+    variable,
+    data = dat_env,
+    posterior_draws = env_posterior_draws,
+    response = "mean_log_Kn",
+    n_grid = 100
+) {
+
+  # Extract existing posterior slopes
+  beta_z <- posterior_draws %>%
+    filter(model == variable) %>%
+    pull(beta)
+
+  if (length(beta_z) == 0) {
+    stop("No posterior draws found for ", variable)
+  }
+
+  # Observed data
+  observed <- data %>%
+    transmute(
+      x = .data[[variable]],
+      y = .data[[response]]
+    ) %>%
+    filter(
+      is.finite(x),
+      is.finite(y)
+    )
+
+  # IMPORTANT:
+  # These must match the scaling used to fit the model.
+  mean_x <- mean(observed$x)
+  sd_x <- sd(observed$x)
+
+  # Convert standardized posterior slopes to original units
+  beta_original <- beta_z / sd_x
+
+  # Anchor the regression lines at the observed means
+  mean_y <- mean(observed$y)
+
+  # Grid of environmental values
+  x_grid <- seq(
+    min(observed$x),
+    max(observed$x),
+    length.out = n_grid
+  )
+
+  # Compute posterior expected relationships
+  # Each row corresponds to an environmental value
+  prediction_summary <- lapply(
+    x_grid,
+    function(x) {
+
+      predicted_y <- mean_y +
+        beta_original * (x - mean_x)
+
+      tibble(
+        x = x,
+        median = median(predicted_y),
+        lower = quantile(predicted_y, 0.025),
+        upper = quantile(predicted_y, 0.975)
+      )
+    }
+  ) %>%
+    bind_rows()
+
+  # Plot
+  ggplot() +
+    geom_point(
+      data = observed,
+      aes(x = x, y = y),
+      alpha = 0.4,
+      size = 1.5
+    ) +
+    geom_ribbon(
+      data = prediction_summary,
+      aes(
+        x = x,
+        ymin = lower,
+        ymax = upper
+      ),
+      alpha = 0.2
+    ) +
+    geom_line(
+      data = prediction_summary,
+      aes(
+        x = x,
+        y = median
+      ),
+      linewidth = 0.9
+    ) +
+    labs(
+      title = toupper(variable),
+      subtitle = "Posterior median slope and 95% credible interval",
+      x = "Environmental index (original units)",
+      y = "Mean log body condition"
+    ) +
+    theme_classic(base_size = 12)
+}
+
+env_linear_plots <- map(
+  unique(env_posterior_draws$model),
+  plot_env_linear
+)
+
+env_linear_combined <- wrap_plots(
+  env_linear_plots,
+  ncol = 3
+)
+
+env_linear_combined
 
 ##### -------------------------------------------------------------------- #####
 ##### -------------------------------------------------------------------- #####
 ##### -------------------------------------------------------------------- #####
 ##### -------------------------------------------------------------------- #####
 ##### -------------------------------------------------------------------- #####
-
-
-# 4.1???????? body condition with median age interaction with env variables
-
-
-#
-# # -----------------------------
-# # 30. median age with env variables
-# # -----------------------------
-#
-# env_variables <- c(
-#   "pdo_m_lag1",
-#   "npgo_m_lag1",
-#   "oni_m_lag1",
-#   "npi_m_lag1",
-#   "pdo_m_prev3",
-#   "npgo_m_prev3",
-#   "oni_m_prev3",
-#   "npi_m_prev3",
-#   "pdo_m_prev6",
-#   "npgo_m_prev6",
-#   "oni_m_prev6",
-#   "npi_m_prev6"
-# )
-#
-# setdiff(
-#   env_variables,
-#   names(lwa_env)
-# )
-#
-#
-# # -----------------------------
-# # 31. median age with env variables
-# # -----------------------------
-#
-#
-# # prep and standardize variables
-#
-# lwa_age_env <- lwa_env %>%
-#   mutate(
-#     Age_yrs = as.numeric(as.character(Age_yrs)),
-#     age_z = as.numeric(scale(Age_yrs)),
-#     year_f = factor(Year),
-#     month_f = factor(Month),
-#     Sex = factor(Sex),
-#     Source = factor(Source)
-#   )
-#
-# lwa_age_env <- lwa_age_env %>%
-#   mutate(
-#     across(
-#       all_of(env_variables),
-#       \(x) as.numeric(scale(x)),
-#       .names = "{.col}_z"
-#     )
-#   )
-#
-# lwa_age_env %>%
-#   summarise(
-#     n = n(),
-#     minimum_age = min(as.numeric(Age_yrs), na.rm = TRUE),
-#     median_age = median(Age_yrs, na.rm = TRUE),
-#     maximum_age = max(Age_yrs, na.rm = TRUE),
-#     missing_age = sum(is.na(Age_yrs))
-#   )
-#
-# # -----------------------------
-# # 32. Fit a null model containing age but no environment
-# # -----------------------------
-#
-#
-# age_null_model <- brm(
-#   formula = log_Kn ~ age_z + Sex +
-#     (1 | Source) +
-#     (1 | year_f) +
-#     (1 | month_f),
-#
-#   data = lwa_age_env,
-#
-#   family = gaussian(),
-#
-#   prior = c(
-#     prior(normal(0, 0.10), class = "b"),
-#     prior(normal(0, 0.20), class = "Intercept"),
-#     prior(exponential(2), class = "sd"),
-#     prior(exponential(5), class = "sigma")
-#   ),
-#
-#   chains = 4,
-#   cores = 4,
-#   iter = 4000,
-#   warmup = 2000,
-#   seed = 123,
-#   backend = "cmdstanr",
-#   control = list(
-#     adapt_delta = 0.95,
-#     max_treedepth = 12
-#   ),
-#
-#   save_pars = save_pars(all = TRUE),
-#   file = "stock-specific/hake/model-outputs/age_null_model",
-#   file_refit = "on_change"
-# )
-#
-# # inspect age effect
-#
-# fixef(
-#   age_null_model,
-#   pars = "age_z"
-# )
-#
-# # -----------------------------
-# # 32. Function for an additive age–environment model
-# # -----------------------------
-#
-# fit_age_env_additive <- function(
-#     data,
-#     env_variable,
-#     output_directory = "stock-specific/hake/model-outputs/",
-#     seed = 123
-# ) {
-#
-#   env_z <- paste0(env_variable, "_z")
-#
-#   model_formula <- bf(
-#     reformulate(
-#       termlabels = c(
-#         "age_z",
-#         env_z,
-#         "Sex",
-#         "(1 | Source)",
-#         "(1 | year_f)",
-#         "(1 | month_f)"
-#       ),
-#       response = "log_Kn"
-#     )
-#   )
-#
-#   brm(
-#     formula = model_formula,
-#     data = data,
-#     family = gaussian(),
-#
-#     prior = c(
-#       prior(normal(0, 0.10), class = "b"),
-#       prior(normal(0, 0.20), class = "Intercept"),
-#       prior(exponential(2), class = "sd"),
-#       prior(exponential(5), class = "sigma")
-#     ),
-#
-#     chains = 4,
-#     cores = 4,
-#     iter = 4000,
-#     warmup = 2000,
-#     seed = seed,
-#     backend = "cmdstanr",
-#
-#     control = list(
-#       adapt_delta = 0.95,
-#       max_treedepth = 12
-#     ),
-#
-#     save_pars = save_pars(all = TRUE),
-#
-#     file = file.path(
-#       output_directory,
-#       paste0("age_", env_variable)
-#     ),
-#
-#     file_refit = "on_change",
-#     refresh = 500
-#   )
-# }
-#
-#
-# dir.create(
-#   "stock-specific/hake/model-output/age_env_additive",
-#   recursive = TRUE,
-#   showWarnings = FALSE
-# )
-#
-#
-#
-#
-# # -----------------------------
-# # 33. Fit additive models for every environmental variable
-# # -----------------------------
-#
-# age_env_additive_models <- env_variables %>%
-#   set_names() %>%
-#   map(
-#     \(env_variable) {
-#       fit_age_env_additive(
-#         data = lwa_age_env,
-#         env_variable = env_variable
-#       )
-#     }
-#   )
-#
-#
-# # -----------------------------
-# # 34. Function for age × environment interactions
-# # -----------------------------
-#
-#
-# fit_age_env_interaction <- function(
-#     data,
-#     env_variable,
-#     output_directory = "models/age_env_interaction",
-#     seed = 123
-# ) {
-#
-#   env_z <- paste0(env_variable, "_z")
-#
-#   interaction_term <- paste0(
-#     "age_z * ",
-#     env_z
-#   )
-#
-#   model_formula <- bf(
-#     as.formula(
-#       paste(
-#         "log_Kn ~",
-#         interaction_term,
-#         "+ Sex",
-#         "+ (1 | Source)",
-#         "+ (1 | year_f)",
-#         "+ (1 | month_f)"
-#       )
-#     )
-#   )
-#
-#   brm(
-#     formula = model_formula,
-#     data = data,
-#     family = gaussian(),
-#
-#     prior = c(
-#       prior(normal(0, 0.10), class = "b"),
-#       prior(normal(0, 0.20), class = "Intercept"),
-#       prior(exponential(2), class = "sd"),
-#       prior(exponential(5), class = "sigma")
-#     ),
-#
-#     chains = 4,
-#     cores = 4,
-#     iter = 4000,
-#     warmup = 2000,
-#     seed = seed,
-#     backend = "cmdstanr",
-#
-#     control = list(
-#       adapt_delta = 0.97,
-#       max_treedepth = 13
-#     ),
-#
-#     save_pars = save_pars(all = TRUE),
-#
-#     file = file.path(
-#       output_directory,
-#       paste0("age_interaction_", env_variable)
-#     ),
-#
-#     file_refit = "on_change",
-#     refresh = 500
-#   )
-# }
-#
-# # create directory
-#
-# dir.create(
-#   "stock-specific/hake/model-output/age_env_interaction",
-#   recursive = TRUE,
-#   showWarnings = FALSE
-# )
-#
-# # fit all interaction models
-#
-# # age_env_interaction_models <- env_variables %>%
-# #   set_names() %>%
-# #   map(
-# #     \(env_variable) {
-# #       fit_age_env_interaction(
-# #         data = lwa_age_env,
-# #         env_variable = env_variable
-# #       )
-# #     }
-# #   )
-#
-#
-# # fit only select interaction models
-#
-# priority_env_variables <- c(
-#   "pdo_m_lag1",
-#   "pdo_m_prev3",
-#   "pdo_m_prev6",
-#   "npi_m_prev6"
-# )
-#
-# priority_interaction_models <- priority_env_variables %>%
-#   set_names() %>%
-#   map(
-#     \(env_variable) {
-#       fit_age_env_interaction(
-#         data = lwa_age_env,
-#         env_variable = env_variable
-#       )
-#     }
-#   )
-#
-#
-#
-#
-#
-# # -----------------------------
-# # 35. Extract age, environmental and interaction effects
-# # -----------------------------
-#
-#
-# summarize_age_env_model <- function(
-#     model,
-#     env_variable
-# ) {
-#
-#   env_parameter <- paste0(
-#     "b_",
-#     env_variable,
-#     "_z"
-#   )
-#
-#   interaction_candidates <- c(
-#     paste0(
-#       "b_age_z:",
-#       env_variable,
-#       "_z"
-#     ),
-#     paste0(
-#       "b_",
-#       env_variable,
-#       "_z:age_z"
-#     )
-#   )
-#
-#   model_draws <- as_draws_df(model)
-#
-#   interaction_parameter <- interaction_candidates[
-#     interaction_candidates %in% names(model_draws)
-#   ]
-#
-#   age_draws <- model_draws[["b_age_z"]]
-#   env_draws <- model_draws[[env_parameter]]
-#
-#   interaction_draws <- if (length(interaction_parameter) == 1L) {
-#     model_draws[[interaction_parameter]]
-#   } else {
-#     rep(NA_real_, nrow(model_draws))
-#   }
-#
-#   tibble(
-#     covariate = env_variable,
-#     effect = c(
-#       "Age",
-#       "Environment",
-#       "Age × environment"
-#     ),
-#     median_beta = c(
-#       median(age_draws),
-#       median(env_draws),
-#       median(interaction_draws, na.rm = TRUE)
-#     ),
-#     lower_beta = c(
-#       quantile(age_draws, 0.025),
-#       quantile(env_draws, 0.025),
-#       quantile(interaction_draws, 0.025, na.rm = TRUE)
-#     ),
-#     upper_beta = c(
-#       quantile(age_draws, 0.975),
-#       quantile(env_draws, 0.975),
-#       quantile(interaction_draws, 0.975, na.rm = TRUE)
-#     ),
-#     probability_positive = c(
-#       mean(age_draws > 0),
-#       mean(env_draws > 0),
-#       mean(interaction_draws > 0, na.rm = TRUE)
-#     ),
-#     probability_negative = c(
-#       mean(age_draws < 0),
-#       mean(env_draws < 0),
-#       mean(interaction_draws < 0, na.rm = TRUE)
-#     )
-#   )
-# }
-
-
-### NEED TO REDO THIS SECTION
-
-
-
-### START NEXT HERE (SKIP PREVIOUS)
-
-##### -------------------------------------------------------------------- #####
-##### -------------------------------------------------------------------- #####
-##### -------------------------------------------------------------------- #####
-##### -------------------------------------------------------------------- #####
-##### -------------------------------------------------------------------- #####
-
 
 # Median age with environmental variables individually
 
@@ -2821,19 +2490,23 @@ env_percent_change_plot
 # 4.1 Define the environmental variables
 # -----------------------------
 
+# list of environmental variables to use
 env_variables <- c(
-  "pdo_m_lag1",
-  "npgo_m_lag1",
-  "oni_m_lag1",
-  "npi_m_lag1",
+  "pdo_m_prev1",
+  "npgo_m_prev1",
+  "oni_m_prev1",
+  "npi_m_prev1",
+  "mei_m_prev1",
   "pdo_m_prev3",
   "npgo_m_prev3",
   "oni_m_prev3",
   "npi_m_prev3",
+  "mei_m_prev3",
   "pdo_m_prev6",
   "npgo_m_prev6",
   "oni_m_prev6",
-  "npi_m_prev6"
+  "npi_m_prev6",
+  "mei_m_prev6"
 )
 
 # check if there are missing environmental variables in the data to us
@@ -2884,6 +2557,7 @@ age_source_data %>%
     n_fish = n(),
     minimum_age = min(Age_yrs),
     median_age = median(Age_yrs),
+    mean_age = mean(Age_yrs),
     maximum_age = max(Age_yrs),
     n_years = n_distinct(Year),
     n_months = n_distinct(date)
@@ -2912,14 +2586,14 @@ env_uniqueness_check %>%
       starts_with("n_"),
       \(x) max(x, na.rm = TRUE)
     )
-  )
+  ) %>% as.data.frame()
 
 # -----------------------------
-# 4.4 Create monthly median-age dataset
+# 4.4 Create monthly mean-age dataset
 # -----------------------------
 
 # summarize age by month
-monthly_median_age <- age_source_data %>%
+monthly_mean_age <- age_source_data %>%
   mutate(Age_yrs = as.numeric(as.character(Age_yrs))) %>%
   group_by(
     Year,
@@ -2996,13 +2670,13 @@ monthly_median_age <- age_source_data %>%
   arrange(date)
 
 # inspect monthly sample sizes
-summary(monthly_median_age$n_fish)
+summary(monthly_mean_age$n_fish)
 
 # determine minimum sample size before modelling
 minimum_monthly_sample <- 20
 
 # remove months with less than the minimum_monthly_sample of age estimates
-monthly_median_age <- monthly_median_age %>%
+monthly_mean_age <- monthly_mean_age %>%
   filter(n_fish >= minimum_monthly_sample)
 
 
@@ -3011,7 +2685,7 @@ monthly_median_age <- monthly_median_age %>%
 # -----------------------------
 
 # scale variables and log number of fish
-monthly_median_age <- monthly_median_age %>%
+monthly_mean_age <- monthly_mean_age %>%
   mutate(
     across(
       all_of(env_variables),
@@ -3023,10 +2697,10 @@ monthly_median_age <- monthly_median_age %>%
   )
 
 # view data
-monthly_median_age %>%
+monthly_mean_age %>%
   select(
     date,
-    median_age,
+    mean_age,
     n_fish,
     all_of(paste0(env_variables, "_z"))
   ) %>%
@@ -3039,7 +2713,7 @@ monthly_median_age %>%
 
 # median line plot
 ggplot(
-  monthly_median_age,
+  monthly_mean_age,
   aes(
     x = date,
     y = median_age
@@ -3065,7 +2739,7 @@ ggplot(
 
 # mean line plot
 ggplot(
-  monthly_median_age,
+  monthly_mean_age,
   aes(
     x = date,
     y = mean_age
@@ -3089,27 +2763,9 @@ ggplot(
   ) +
   theme_classic()
 
-# median boxplot
-ggplot(
-  monthly_median_age,
-  aes(
-    x = month_f,
-    y = median_age
-  )
-) +
-  geom_boxplot(
-    outlier.alpha = 0.3
-  ) +
-  labs(
-    title = "Seasonal variation in sampled age composition",
-    x = "Month",
-    y = "Median age (years)"
-  ) +
-  theme_classic()
-
 # mean box plot
 ggplot(
-  monthly_median_age,
+  monthly_mean_age,
   aes(
     x = month_f,
     y = mean_age
@@ -3122,33 +2778,12 @@ ggplot(
     title = "Seasonal variation in sampled age composition",
     x = "Month",
     y = "Mean age (years)"
-  ) +
-  theme_classic()
-
-# median age accross sample size
-ggplot(
-  monthly_median_age,
-  aes(
-    x = log_n_fish,
-    y = median_age
-  )
-) +
-  geom_point(
-    alpha = 0.5
-  ) +
-  geom_smooth(
-    method = "lm",
-    se = TRUE
-  ) +
-  labs(
-    x = "Log monthly sample size",
-    y = "Median age (years)"
   ) +
   theme_classic()
 
 # mean age accross sample size
 ggplot(
-  monthly_median_age,
+  monthly_mean_age,
   aes(
     x = log_n_fish,
     y = mean_age
@@ -3167,12 +2802,12 @@ ggplot(
   ) +
   theme_classic()
 
-# median age by source
+# mean age by source
 ggplot(
-  monthly_median_age,
+  monthly_mean_age,
   aes(
     x = n_sources,
-    y = median_age
+    y = mean_age
   )
 ) +
   geom_point(
@@ -3184,7 +2819,7 @@ ggplot(
   ) +
   labs(
     x = "Number of sources represented",
-    y = "Median age (years)"
+    y = "Mean age (years)"
   ) +
   theme_classic()
 
@@ -3192,69 +2827,6 @@ ggplot(
 # -----------------------------
 # 4.7 Fit a monthly null model
 # -----------------------------
-
-# monthly median age
-monthly_median_age_null_model <- brm(
-  formula = bf(
-    median_age ~
-      month_f +
-      s(time_index, k = 10) +
-      log_n_fish +
-      n_sources +
-      (1 | year_f)
-  ),
-
-  data = monthly_median_age,
-
-  family = student(),
-
-  prior = c(
-    prior(
-      normal(0, 1),
-      class = "b"
-    ),
-
-    prior(
-      normal(8, 3),
-      class = "Intercept"
-    ),
-
-    prior(
-      exponential(1),
-      class = "sd"
-    ),
-
-    prior(
-      exponential(1),
-      class = "sigma"
-    ),
-
-    prior(
-      gamma(2, 0.1),
-      class = "nu"
-    )
-  ),
-
-  chains = 4,
-  cores = 4,
-  iter = 4000,
-  warmup = 2000,
-
-  seed = 123,
-  backend = "cmdstanr",
-
-  control = list(
-    adapt_delta = 0.97,
-    max_treedepth = 13
-  ),
-
-  save_pars = save_pars(
-    all = TRUE
-  ),
-
-  file = "stock-specific/hake/model-outputs/monthly_median_age_null_model",
-  file_refit = "on_change"
-)
 
 # monthly mean age
 monthly_mean_age_null_model <- brm(
@@ -3267,7 +2839,7 @@ monthly_mean_age_null_model <- brm(
       (1 | year_f)
   ),
 
-  data = monthly_median_age,
+  data = monthly_mean_age,
 
   family = student(),
 
@@ -3324,18 +2896,13 @@ monthly_mean_age_null_model <- brm(
 # 4.8 Basic model summaries
 # --------------------------------------------------
 
-summary(monthly_median_age_null_model)
 summary(monthly_mean_age_null_model)
 
 # Useful compact fixed-effect tables
-fixef(monthly_median_age_null_model)
 fixef(monthly_mean_age_null_model)
 
 # Random-effect SDs and other variance parameters
-VarCorr(monthly_median_age_null_model)
 VarCorr(monthly_mean_age_null_model)
-
-
 
 
 # --------------------------------------------------
@@ -3386,22 +2953,11 @@ check_nuts <- function(model) {
 }
 
 # diagnostics - want zero divergences, and minimal iterations at max tree depth
-nuts_median <- check_nuts(
-  monthly_median_age_null_model
-)
-
 nuts_mean <- check_nuts(
   monthly_mean_age_null_model
 )
 
-
 # check how many iterations were at max tree depth
-nuts_median %>%
-  filter(
-    Parameter == "treedepth__",
-    Value == 13
-  )
-
 nuts_mean %>%
   filter(
     Parameter == "treedepth__",
@@ -3421,49 +2977,19 @@ treedepth_rate <- function(model, max_depth = 13) {
 }
 
 treedepth_rate(
-  monthly_median_age_null_model
-)
-
-treedepth_rate(
   monthly_mean_age_null_model
 )
 
 # chheck E-BFMI - plots compare distribution
 bayesplot::mcmc_nuts_energy(
-  nuts_params(monthly_median_age_null_model)
-)
-
-bayesplot::mcmc_nuts_energy(
   nuts_params(monthly_mean_age_null_model)
 )
 
-
-monthly_median_age_null_model$fit$cmdstan_diagnose()
-
-monthly_mean_age_null_model$fit$cmdstan_diagnose()
-
-
 # traceplots
-plot(monthly_median_age_null_model)
-
 plot(monthly_mean_age_null_model)
-
-
-draws_median <- as_draws_df(
-  monthly_median_age_null_model
-)
 
 draws_mean <- as_draws_df(
   monthly_mean_age_null_model
-)
-
-mcmc_trace(
-  draws_median,
-  pars = c(
-    "b_Intercept",
-    "sigma",
-    "nu"
-  )
 )
 
 mcmc_trace(
@@ -3480,21 +3006,9 @@ mcmc_trace(
 # -----------------------------
 
 pp_check(
-  monthly_median_age_null_model,
-  ndraws = 100,
-  type = "dens_overlay"
-)
-
-pp_check(
   monthly_mean_age_null_model,
   ndraws = 100,
   type = "dens_overlay"
-)
-
-pp_check(
-  monthly_median_age_null_model,
-  type = "scatter_avg",
-  ndraws = 100
 )
 
 pp_check(
@@ -3504,23 +3018,9 @@ pp_check(
 )
 
 pp_check(
-  monthly_median_age_null_model,
-  type = "stat",
-  stat = "max",
-  ndraws = 100
-)
-
-pp_check(
   monthly_mean_age_null_model,
   type = "stat",
   stat = "max",
-  ndraws = 100
-)
-
-pp_check(
-  monthly_median_age_null_model,
-  type = "stat",
-  stat = "sd",
   ndraws = 100
 )
 
@@ -3535,20 +3035,8 @@ pp_check(
 # 4.11 Smooth temporal trend
 # -----------------------------
 
-
-conditional_smooths(
-  monthly_median_age_null_model
-)
-
 conditional_smooths(
   monthly_mean_age_null_model
-)
-
-
-plot(
-  conditional_smooths(
-    monthly_median_age_null_model
-  )
 )
 
 plot(
@@ -3557,48 +3045,19 @@ plot(
   )
 )
 
-
-
-smooth_median <- conditional_smooths(
-  monthly_median_age_null_model
-)
-
 smooth_mean <- conditional_smooths(
   monthly_mean_age_null_model
 )
 
-smooth_median
 smooth_mean
 
-
-
 # inspect month effects
-conditional_effects(
-  monthly_median_age_null_model,
-  effects = "month_f"
-)
-
 conditional_effects(
   monthly_mean_age_null_model,
   effects = "month_f"
 )
 
-
 # sample size effects
-plot(
-  conditional_effects(
-    monthly_median_age_null_model,
-    effects = "log_n_fish"
-  )
-)
-
-plot(
-  conditional_effects(
-    monthly_median_age_null_model,
-    effects = "n_sources"
-  )
-)
-
 plot(
   conditional_effects(
     monthly_mean_age_null_model,
@@ -3617,45 +3076,12 @@ plot(
 # -----------------------------
 # 4.12 fitted versus observed value
 # -----------------------------
-
-pred_median <- fitted(
-  monthly_median_age_null_model,
-  summary = TRUE
-)
-
-median_check <- monthly_median_age %>%
-  mutate(
-    fitted = pred_median[, "Estimate"],
-    fitted_lower = pred_median[, "Q2.5"],
-    fitted_upper = pred_median[, "Q97.5"]
-  )
-
-ggplot(
-  median_check,
-  aes(
-    x = fitted,
-    y = median_age
-  )
-) +
-  geom_point(alpha = 0.5) +
-  geom_abline(
-    slope = 1,
-    intercept = 0,
-    linetype = "dashed"
-  ) +
-  labs(
-    x = "Fitted median age",
-    y = "Observed median age"
-  ) +
-  theme_classic()
-
-
 pred_mean <- fitted(
   monthly_mean_age_null_model,
   summary = TRUE
 )
 
-mean_check <- monthly_median_age %>%
+mean_check <- monthly_mean_age %>%
   mutate(
     fitted = pred_mean[, "Estimate"],
     fitted_lower = pred_mean[, "Q2.5"],
@@ -3682,39 +3108,9 @@ ggplot(
   theme_classic()
 
 
-
-
 # -----------------------------
 # 4.13 residual structure
 # -----------------------------
-
-median_check <- median_check %>%
-  mutate(
-    residual = median_age - fitted
-  )
-
-ggplot(
-  median_check,
-  aes(
-    x = time_index,
-    y = residual
-  )
-) +
-  geom_point(alpha = 0.5) +
-  geom_smooth(
-    method = "gam",
-    formula = y ~ s(x)
-  ) +
-  geom_hline(
-    yintercept = 0,
-    linetype = "dashed"
-  ) +
-  labs(
-    x = "Time",
-    y = "Observed - fitted median age"
-  ) +
-  theme_classic()
-
 
 mean_check <- mean_check %>%
   mutate(
@@ -3745,21 +3141,6 @@ ggplot(
 
 # residuals by month
 ggplot(
-  median_check,
-  aes(
-    x = month_f,
-    y = residual
-  )
-) +
-  geom_boxplot() +
-  geom_hline(
-    yintercept = 0,
-    linetype = "dashed"
-  ) +
-  theme_classic()
-
-
-ggplot(
   mean_check,
   aes(
     x = month_f,
@@ -3773,6 +3154,14 @@ ggplot(
   ) +
   theme_classic()
 
+
+
+
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
 
 
 # -----------------------------
