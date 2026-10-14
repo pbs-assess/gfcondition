@@ -2468,6 +2468,7 @@ plot_env_linear <- function(
 
 env_linear_plots <- map(
   unique(env_posterior_draws$model),
+  # unique(env_posterior_draws$model)[order(unique(env_posterior_draws$model))],
   plot_env_linear
 )
 
@@ -2484,7 +2485,7 @@ env_linear_combined
 ##### -------------------------------------------------------------------- #####
 ##### -------------------------------------------------------------------- #####
 
-# Median age with environmental variables individually
+# Mean age with environmental variables individually by month
 
 # -----------------------------
 # 4.1 Define the environmental variables
@@ -3163,331 +3164,311 @@ ggplot(
 ##### -------------------------------------------------------------------- #####
 ##### -------------------------------------------------------------------- #####
 
+# # Annual mean age with which env variables? Might have to remove this section
+#
+# # -----------------------------
+# # 5.1 Fit an annual mean age model
+# # -----------------------------
+#
+# annual_mean_age <- age_source_data %>%
+#   mutate(Age_yrs = as.numeric(as.character(Age_yrs))) %>%
+#   group_by(
+#     Year,
+#     year_f
+#   ) %>%
+#   summarise(
+#     median_age = median(
+#       Age_yrs,
+#       na.rm = TRUE
+#     ),
+#
+#     mean_age = mean(
+#       Age_yrs,
+#       na.rm = TRUE
+#     ),
+#
+#     age_sd = sd(
+#       Age_yrs,
+#       na.rm = TRUE
+#     ),
+#
+#     age_iqr = IQR(
+#       Age_yrs,
+#       na.rm = TRUE
+#     ),
+#
+#     n_fish = sum(
+#       !is.na(Age_yrs)
+#     ),
+#
+#     n_months = n_distinct(
+#       Month
+#     ),
+#
+#     n_sources = n_distinct(
+#       Source[!is.na(Source)]
+#     ),
+#
+#     across(
+#       all_of(env_variables),
+#       \(x) mean(
+#         x,
+#         na.rm = TRUE
+#       ),
+#       .names = "{.col}_annual"
+#     ),
+#
+#     .groups = "drop"
+#   ) %>%
+#   arrange(Year) %>%
+#   mutate(
+#     across(
+#       ends_with("_annual"),
+#       \(x) as.numeric(scale(x)),
+#       .names = "{.col}_z"
+#     ),
+#
+#     year_z = as.numeric(
+#       scale(Year)
+#     ),
+#
+#     log_n_fish = log(n_fish)
+#   )
+#
+# # plot annual age over time
+# ggplot(
+#   annual_mean_age,
+#   aes(
+#     x = Year,
+#     y = mean_age
+#   )
+# ) +
+#   geom_line() +
+#   geom_point(
+#     aes(size = n_fish),
+#     alpha = 0.6
+#   ) +
+#   labs(
+#     title = "Annual mean age of sampled fish",
+#     x = "Year",
+#     y = "Mean age (years)",
+#     size = "Fish sampled"
+#   ) +
+#   theme_classic()
+#
+# # select annual env variables to use
+# annual_env_variables <- c(
+#   "pdo_m_lag1_annual_z",
+#   "npgo_m_lag1_annual_z",
+#   "oni_m_lag1_annual_z",
+#   "npi_m_lag1_annual_z",
+#
+#   "pdo_m_prev3_annual_z",
+#   "npgo_m_prev3_annual_z",
+#   "oni_m_prev3_annual_z",
+#   "npi_m_prev3_annual_z",
+#
+#   "pdo_m_prev6_annual_z",
+#   "npgo_m_prev6_annual_z",
+#   "oni_m_prev6_annual_z",
+#   "npi_m_prev6_annual_z"
+# )
+#
+# setdiff(
+#   annual_env_variables,
+#   names(annual_median_age)
+# )
+#
+# annual_age_all_env <- annual_median_age %>%
+#   mutate(
+#     Year = as.numeric(Year),
+#
+#     year_z = as.numeric(
+#       scale(Year)
+#     ),
+#
+#     log_n_fish = log(n_fish)
+#   ) %>%
+#   filter(
+#     if_all(
+#       all_of(
+#         c(
+#           "median_age",
+#           "mean_age",
+#           "year_z",
+#           "log_n_fish",
+#           "n_months",
+#           "n_sources",
+#           annual_env_variables
+#         )
+#       ),
+#       ~ !is.na(.x)
+#     )
+#   ) %>%
+#   arrange(Year)
+#
+#
+#
+# # check usable years
+# annual_age_all_env %>%
+#   summarise(
+#     n_years = n(),
+#     first_year = min(Year),
+#     last_year = max(Year),
+#     median_age_min = min(median_age),
+#     median_age_max = max(median_age),
+#     mean_age_min = min(mean_age),
+#     mean_age_max = max(mean_age)
+#   )
+#
+# cat(
+#   "Annual observations:",
+#   nrow(annual_age_all_env),
+#   "\nEnvironmental predictors:",
+#   length(annual_env_variables),
+#   "\n"
+# )
+#
+# # correlations among env predictors
+# annual_env_correlation <- annual_age_all_env %>%
+#   select(
+#     all_of(annual_env_variables)
+#   ) %>%
+#   cor(
+#     use = "pairwise.complete.obs"
+#   )
+#
+# round(
+#   annual_env_correlation,
+#   2
+# )
+#
+# ## annual pdo age model
+# annual_pdo_age_model <- brm(
+#   formula = bf(
+#     median_age ~
+#       pdo_m_prev6_annual_z +
+#       s(Year, k = 8) +
+#       log_n_fish +
+#       n_months +
+#       n_sources
+#   ),
+#
+#   data = annual_median_age,
+#
+#   family = student(),
+#
+#   prior = c(
+#     prior(
+#       normal(0, 1),
+#       class = "b"
+#     ),
+#
+#     prior(
+#       normal(8, 3),
+#       class = "Intercept"
+#     ),
+#
+#     prior(
+#       exponential(1),
+#       class = "sigma"
+#     ),
+#
+#     prior(
+#       gamma(2, 0.1),
+#       class = "nu"
+#     )
+#   ),
+#
+#   chains = 4,
+#   cores = 4,
+#   iter = 4000,
+#   warmup = 2000,
+#
+#   backend = "cmdstanr",
+#   seed = 123,
+#
+#   control = list(
+#     adapt_delta = 0.97,
+#     max_treedepth = 13
+#   )
+# )
+#
+#
+# grep(
+#   "^b_",
+#   variables(annual_pdo_age_model),
+#   value = TRUE
+# )
+#
+# pdo_coefficient <- "b_pdo_m_prev6_annual_z"
+#
+# annual_pdo_draws <- as_draws_df(
+#   annual_pdo_age_model
+# ) %>%
+#   transmute(
+#     beta_pdo = .data[[pdo_coefficient]]
+#   )
+#
+#
+# annual_pdo_summary <- annual_pdo_draws %>%
+#   summarise(
+#     median_beta = median(beta_pdo),
+#     lower_95 = quantile(beta_pdo, 0.025),
+#     upper_95 = quantile(beta_pdo, 0.975),
+#     probability_positive = mean(beta_pdo > 0),
+#     probability_negative = mean(beta_pdo < 0)
+#   )
+#
+# annual_pdo_summary
+#
+#
+# annual_pdo_posterior_plot <- ggplot(
+#   annual_pdo_draws,
+#   aes(
+#     x = beta_pdo,
+#     y = "PDO"
+#   )
+# ) +
+#   stat_halfeye(
+#     .width = c(0.50, 0.80, 0.95),
+#     point_interval = median_qi,
+#     normalize = "groups"
+#   ) +
+#   geom_vline(
+#     xintercept = 0,
+#     linetype = "dashed",
+#     linewidth = 0.6
+#   ) +
+#   labs(
+#     title = "Posterior effect of PDO on annual median age",
+#     subtitle = paste(
+#       "Effect associated with a 1-SD increase in annual PDO;",
+#       "intervals show 50%, 80%, and 95% credible intervals"
+#     ),
+#     x = "Change in annual median age (years)",
+#     y = NULL
+#   ) +
+#   theme_classic(base_size = 12)
+#
+# annual_pdo_posterior_plot
+
+
+
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+
+# Fit an annual median age age model for each env variable
 
 # -----------------------------
-# 5.1 Fit an annual median/mean age model
-# -----------------------------
-
-
-
-annual_median_age <- age_source_data %>%
-  mutate(Age_yrs = as.numeric(as.character(Age_yrs))) %>%
-  group_by(
-    Year,
-    year_f
-  ) %>%
-  summarise(
-    median_age = median(
-      Age_yrs,
-      na.rm = TRUE
-    ),
-
-    mean_age = mean(
-      Age_yrs,
-      na.rm = TRUE
-    ),
-
-    age_sd = sd(
-      Age_yrs,
-      na.rm = TRUE
-    ),
-
-    age_iqr = IQR(
-      Age_yrs,
-      na.rm = TRUE
-    ),
-
-    n_fish = sum(
-      !is.na(Age_yrs)
-    ),
-
-    n_months = n_distinct(
-      Month
-    ),
-
-    n_sources = n_distinct(
-      Source[!is.na(Source)]
-    ),
-
-    across(
-      all_of(env_variables),
-      \(x) mean(
-        x,
-        na.rm = TRUE
-      ),
-      .names = "{.col}_annual"
-    ),
-
-    .groups = "drop"
-  ) %>%
-  arrange(Year) %>%
-  mutate(
-    across(
-      ends_with("_annual"),
-      \(x) as.numeric(scale(x)),
-      .names = "{.col}_z"
-    ),
-
-    year_z = as.numeric(
-      scale(Year)
-    ),
-
-    log_n_fish = log(n_fish)
-  )
-
-# plot annual age over time
-ggplot(
-  annual_median_age,
-  aes(
-    x = Year,
-    y = median_age
-  )
-) +
-  geom_line() +
-  geom_point(
-    aes(size = n_fish),
-    alpha = 0.6
-  ) +
-  labs(
-    title = "Annual median age of sampled fish",
-    x = "Year",
-    y = "Median age (years)",
-    size = "Fish sampled"
-  ) +
-  theme_classic()
-
-ggplot(
-  annual_median_age,
-  aes(
-    x = Year,
-    y = mean_age
-  )
-) +
-  geom_line() +
-  geom_point(
-    aes(size = n_fish),
-    alpha = 0.6
-  ) +
-  labs(
-    title = "Annual mean age of sampled fish",
-    x = "Year",
-    y = "Mean age (years)",
-    size = "Fish sampled"
-  ) +
-  theme_classic()
-
-# select annual env variables to use
-annual_env_variables <- c(
-  "pdo_m_lag1_annual_z",
-  "npgo_m_lag1_annual_z",
-  "oni_m_lag1_annual_z",
-  "npi_m_lag1_annual_z",
-
-  "pdo_m_prev3_annual_z",
-  "npgo_m_prev3_annual_z",
-  "oni_m_prev3_annual_z",
-  "npi_m_prev3_annual_z",
-
-  "pdo_m_prev6_annual_z",
-  "npgo_m_prev6_annual_z",
-  "oni_m_prev6_annual_z",
-  "npi_m_prev6_annual_z"
-)
-
-setdiff(
-  annual_env_variables,
-  names(annual_median_age)
-)
-
-annual_age_all_env <- annual_median_age %>%
-  mutate(
-    Year = as.numeric(Year),
-
-    year_z = as.numeric(
-      scale(Year)
-    ),
-
-    log_n_fish = log(n_fish)
-  ) %>%
-  filter(
-    if_all(
-      all_of(
-        c(
-          "median_age",
-          "mean_age",
-          "year_z",
-          "log_n_fish",
-          "n_months",
-          "n_sources",
-          annual_env_variables
-        )
-      ),
-      ~ !is.na(.x)
-    )
-  ) %>%
-  arrange(Year)
-
-
-
-# check usable years
-annual_age_all_env %>%
-  summarise(
-    n_years = n(),
-    first_year = min(Year),
-    last_year = max(Year),
-    median_age_min = min(median_age),
-    median_age_max = max(median_age),
-    mean_age_min = min(mean_age),
-    mean_age_max = max(mean_age)
-  )
-
-cat(
-  "Annual observations:",
-  nrow(annual_age_all_env),
-  "\nEnvironmental predictors:",
-  length(annual_env_variables),
-  "\n"
-)
-
-# correlations among env predictors
-annual_env_correlation <- annual_age_all_env %>%
-  select(
-    all_of(annual_env_variables)
-  ) %>%
-  cor(
-    use = "pairwise.complete.obs"
-  )
-
-round(
-  annual_env_correlation,
-  2
-)
-
-## annual pdo age model
-annual_pdo_age_model <- brm(
-  formula = bf(
-    median_age ~
-      pdo_m_prev6_annual_z +
-      s(Year, k = 8) +
-      log_n_fish +
-      n_months +
-      n_sources
-  ),
-
-  data = annual_median_age,
-
-  family = student(),
-
-  prior = c(
-    prior(
-      normal(0, 1),
-      class = "b"
-    ),
-
-    prior(
-      normal(8, 3),
-      class = "Intercept"
-    ),
-
-    prior(
-      exponential(1),
-      class = "sigma"
-    ),
-
-    prior(
-      gamma(2, 0.1),
-      class = "nu"
-    )
-  ),
-
-  chains = 4,
-  cores = 4,
-  iter = 4000,
-  warmup = 2000,
-
-  backend = "cmdstanr",
-  seed = 123,
-
-  control = list(
-    adapt_delta = 0.97,
-    max_treedepth = 13
-  )
-)
-
-
-grep(
-  "^b_",
-  variables(annual_pdo_age_model),
-  value = TRUE
-)
-
-pdo_coefficient <- "b_pdo_m_prev6_annual_z"
-
-annual_pdo_draws <- as_draws_df(
-  annual_pdo_age_model
-) %>%
-  transmute(
-    beta_pdo = .data[[pdo_coefficient]]
-  )
-
-
-annual_pdo_summary <- annual_pdo_draws %>%
-  summarise(
-    median_beta = median(beta_pdo),
-    lower_95 = quantile(beta_pdo, 0.025),
-    upper_95 = quantile(beta_pdo, 0.975),
-    probability_positive = mean(beta_pdo > 0),
-    probability_negative = mean(beta_pdo < 0)
-  )
-
-annual_pdo_summary
-
-
-annual_pdo_posterior_plot <- ggplot(
-  annual_pdo_draws,
-  aes(
-    x = beta_pdo,
-    y = "PDO"
-  )
-) +
-  stat_halfeye(
-    .width = c(0.50, 0.80, 0.95),
-    point_interval = median_qi,
-    normalize = "groups"
-  ) +
-  geom_vline(
-    xintercept = 0,
-    linetype = "dashed",
-    linewidth = 0.6
-  ) +
-  labs(
-    title = "Posterior effect of PDO on annual median age",
-    subtitle = paste(
-      "Effect associated with a 1-SD increase in annual PDO;",
-      "intervals show 50%, 80%, and 95% credible intervals"
-    ),
-    x = "Change in annual median age (years)",
-    y = NULL
-  ) +
-  theme_classic(base_size = 12)
-
-annual_pdo_posterior_plot
-
-
-
-##### -------------------------------------------------------------------- #####
-##### -------------------------------------------------------------------- #####
-##### -------------------------------------------------------------------- #####
-##### -------------------------------------------------------------------- #####
-##### -------------------------------------------------------------------- #####
-
-# -----------------------------
-# 6.1 Fit an annual median age age model for each env variable
+# 5.1 Prep data
 # -----------------------------
 
 
 # Will need to do this for seasonal covariates (as opposed to annual below)
-
 # annual_env_variables <- c(
 #   "pdo_m_lag1_annual_z",
 #   "npgo_m_lag1_annual_z",
@@ -3511,9 +3492,7 @@ annual_pdo_posterior_plot
 # )
 
 
-## alternate for annual env variables
-
-## option 1 - annual covariate
+# function to summarize covariates annually - currently doing the three month season Apr-Jun
 format_covariate <- function(dat, value.col, name) {
   dat %>%
     as_tibble()  %>%
@@ -3523,7 +3502,7 @@ format_covariate <- function(dat, value.col, name) {
     mutate(covariate = name)
 }
 
-env_vars <- c("pdo", "npgo", "oni", "bi", "npi")
+env_vars <- c("pdo", "npgo", "oni", "bi", "npi", "mei")
 
 
 # Get environmental covariates
@@ -3531,16 +3510,19 @@ env_vars <- c("pdo", "npgo", "oni", "bi", "npi")
 env_pdo <- format_covariate(pdo, "anomaly", "pdo")
 env_npgo <- format_covariate(npgo, "anomaly", "npgo")
 env_oni <- format_covariate(oni, "anomaly", "oni")
+env_mei <- format_covariate(mei, "anomaly", "mei")
+env_npi <- format_covariate(npi_monthly, "value", "npi")
+
 env_bi <- pacea::bi %>%
   mutate(value = anomaly,
          covariate = "bi")  %>%
   select(year, value, covariate)
-env_npi <- pacea::npi_annual %>%
-  mutate(value = anomaly,
-         covariate = "npi")  %>%
-  select(year, value, covariate)
+# env_npi <- pacea::npi_annual %>% # annual npi covariate
+#   mutate(value = anomaly,
+#          covariate = "npi")  %>%
+#   select(year, value, covariate)
 
-env_long <- bind_rows(env_pdo, env_npgo, env_oni, env_bi, env_npi)
+env_long <- bind_rows(env_pdo, env_npgo, env_oni, env_bi, env_npi, env_mei)
 
 env_wide <- env_long %>%
   pivot_wider(names_from = covariate, values_from = value)
@@ -3595,6 +3577,7 @@ lwa_env <- lwa_env %>%
 lwa_env <- lwa_env %>%
   mutate(across(all_of(env_vars), scale))
 
+# copy to original
 lwa_env_original <- lwa_env
 
 annual_env_column_names <- c(
@@ -3602,17 +3585,18 @@ annual_env_column_names <- c(
   npgo = "npgo",
   oni = "oni",
   bi = "bi",
-  npi = "npi"
+  npi = "npi",
+  mei = "mei"
 )
 
 # should be nothing
 setdiff(
   unname(annual_env_column_names),
-  names(lwa_env_original)
+  names(lwa_env)
 )
 
 # create new dataframe of annual env variables - will be similar to env_wide dataframe
-annual_environment <- lwa_env_original %>%
+annual_environment <- lwa_env %>%
   transmute(
     Year = as.integer(as.character(Year)),
 
@@ -3629,7 +3613,10 @@ annual_environment <- lwa_env_original %>%
       .data[[annual_env_column_names[["bi"]]]],
 
     npi_annual_same =
-      .data[[annual_env_column_names[["npi"]]]]
+      .data[[annual_env_column_names[["npi"]]]],
+
+    mei_annual_same =
+      .data[[annual_env_column_names[["mei"]]]]
   ) %>%
   group_by(Year) %>%
   summarise(
@@ -3671,7 +3658,8 @@ annual_environment_prior <- annual_environment %>%
     npgo_annual_prior = npgo_annual_same,
     oni_annual_prior = oni_annual_same,
     bi_annual_prior = bi_annual_same,
-    npi_annual_prior = npi_annual_same
+    npi_annual_prior = npi_annual_same,
+    mei_annual_prior = mei_annual_same
   )
 
 # join lagged and current anv variables
@@ -3693,13 +3681,16 @@ annual_env_variables <- c(
   "bi_annual_same",
   "bi_annual_prior",
   "npi_annual_same",
-  "npi_annual_prior"
+  "npi_annual_prior",
+  "mei_annual_same",
+  "mei_annual_prior"
 )
 
+# bothe same year and prior year env variables
 env_variables <- annual_env_variables
 
 # new lwa_env dataframe with env variables (prior and current year)
-lwa_env <- lwa_env_original %>%
+lwa_env <- lwa_env %>%
   mutate(
     Year = as.integer(as.character(Year))
   ) %>%
@@ -3721,8 +3712,10 @@ lwa_env <- lwa_env %>%
     )
   )
 
-# summarise median and mean ages by year
-annual_median_age <- lwa_env %>%
+# summarise mean ages by year
+# maybe should exclude certain months (e.g. winter months)
+annual_mean_age <- lwa_env %>%
+  filter(Month %in% c(4:10)) %>%
   group_by(Year) %>%
   mutate(Age_yrs = as.numeric(as.character(Age_yrs))) %>%
   summarise(
@@ -3800,10 +3793,10 @@ annual_median_age <- lwa_env %>%
 
 
 # -----------------------------
-# 6.2 prepare dataset
+# 5.2 prepare dataset
 # -----------------------------
 
-annual_age_env <- annual_median_age %>%
+annual_age_env <- annual_mean_age %>%
   mutate(
     Year = as.numeric(Year),
 
@@ -3817,16 +3810,16 @@ annual_age_env <- annual_median_age %>%
 
 
 # correlation plots
-annual_median_age %>%
-  select(mean_age, pdo_annual_same, npgo_annual_same, oni_annual_same, bi_annual_same, npi_annual_same) %>%
+annual_mean_age %>%
+  select(mean_age, pdo_annual_same, npgo_annual_same, oni_annual_same, bi_annual_same, npi_annual_same, mei_annual_same) %>%
   ggpairs()
 
-annual_median_age %>%
-  select(mean_age, pdo_annual_prior, npgo_annual_prior, oni_annual_prior, bi_annual_prior, npi_annual_prior) %>%
+annual_mean_age %>%
+  select(mean_age, pdo_annual_prior, npgo_annual_prior, oni_annual_prior, bi_annual_prior, npi_annual_prior, mei_annual_prior) %>%
   ggpairs()
 
 # -----------------------------
-# 6.3 function to fit annual environmental model
+# 5.3 function to fit annual environmental model
 # -----------------------------
 
 fit_annual_age_env_model <- function(
@@ -3837,9 +3830,7 @@ fit_annual_age_env_model <- function(
 ) {
 
   required_variables <- c(
-    # "median_age",
     "mean_age",
-
     "year_z",
     "log_n_fish",
     "n_months",
@@ -3938,7 +3929,6 @@ fit_annual_age_env_model <- function(
     file = file.path(
       output_directory,
       paste0(
-        # "annual_median_age_",
         "annual_mean_age_",
 
         env_variable
@@ -3952,10 +3942,8 @@ fit_annual_age_env_model <- function(
 }
 
 
-
-
 # -----------------------------
-# 6.4 fit each env variable separately
+# 5.4 fit each env variable separately
 # -----------------------------
 
 # run model
@@ -4020,9 +4008,8 @@ annual_age_env_diagnostics <- imap_dfr(
 
 annual_age_env_diagnostics
 
-
 # -----------------------------
-# 6.5 extract possterior from each model
+# 5.5 extract possterior from each model
 # -----------------------------
 
 # function to extract across all models
@@ -4072,6 +4059,7 @@ annual_age_env_draws <- annual_age_env_draws %>%
       grepl("^oni", covariate)  ~ "ONI",
       grepl("^bi", covariate)  ~ "BI",
       grepl("^npi", covariate)  ~ "NPI",
+      grepl("^mei", covariate)  ~ "MEI",
       TRUE                      ~ covariate
     ),
 
@@ -4092,7 +4080,8 @@ annual_age_env_draws <- annual_age_env_draws %>%
         "NPGO",
         "ONI",
         "BI",
-        "NPI"
+        "NPI",
+        "MEI"
       )
     ),
 
@@ -4106,7 +4095,7 @@ annual_age_env_draws <- annual_age_env_draws %>%
   )
 
 # -----------------------------
-# 6.6 summarise posterior coefficints
+# 5.6 summarise posterior coefficints
 # -----------------------------
 
 annual_age_env_summary <- annual_age_env_draws %>%
@@ -4153,7 +4142,7 @@ annual_age_env_summary <- annual_age_env_draws %>%
 annual_age_env_summary
 
 # -----------------------------
-# 6.7 plot all posterior coefficient distributions
+# 5.7 plot all posterior coefficient distributions
 # -----------------------------
 
 # plot and save in object
@@ -4202,9 +4191,8 @@ annual_age_env_posterior_plot <- ggplot(
 
 annual_age_env_posterior_plot
 
-
 # -----------------------------
-# 6.8 forest plot of all posteriors
+# 5.8 forest plot of all posteriors
 # -----------------------------
 
 annual_age_env_forest_data <- annual_age_env_summary %>%
@@ -4258,7 +4246,7 @@ annual_age_env_forest_plot
 
 
 # -----------------------------
-# 6.9 environmental effects plot - data organizing
+# 5.9 environmental effects plot - data organizing
 # -----------------------------
 
 get_model_data <- function(
@@ -4366,7 +4354,7 @@ get_annual_env_effect <- function(
 }
 
 # -----------------------------
-# 6.10 function to plot one env relationship
+# 5.10 function to plot one env relationship
 # -----------------------------
 
 plot_annual_age_env_effect <- function(
@@ -4456,7 +4444,7 @@ plot_annual_age_env_effect <- function(
 
 
 # -----------------------------
-# 6.11 effects plot for each env variable
+# 5.11 effects plot for each env variable
 # -----------------------------
 
 annual_age_env_effect_plots <- imap(
@@ -4491,39 +4479,8 @@ annual_age_env_effect_combined <-
 annual_age_env_effect_combined
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # -----------------------------
-# 6.12 posterior predictions
+# 5.12 posterior predictions and model evaluation
 # -----------------------------
 
 get_annual_fitted_values <- function(
@@ -4661,7 +4618,7 @@ ggplot(
   ) +
   theme_classic()
 
-# rmse and
+# rmse and mean absolute error
 annual_age_env_fit_summary <- annual_age_env_fitted %>%
   mutate(
     residual = mean_age - Estimate
@@ -4690,13 +4647,8 @@ annual_age_env_fit_summary <- annual_age_env_fitted %>%
 
 annual_age_env_fit_summary
 
-
-
-
-
-
 # -----------------------------
-# function to plot observed vs fitted ages
+# 5.13 function to plot observed vs fitted ages over time
 # -----------------------------
 
 
@@ -4735,7 +4687,7 @@ plot_annual_fitted <- function(
     ) +
     geom_point(
       aes(
-        y = median_age,
+        y = mean_age,
         size = n_fish
       ),
       alpha = 0.65
@@ -4745,7 +4697,7 @@ plot_annual_fitted <- function(
     ) +
     labs(
       title = paste(
-        "Observed and fitted annual median age:",
+        "Observed and fitted annual mean age:",
         plot_title
       ),
       subtitle = paste(
@@ -4753,7 +4705,7 @@ plot_annual_fitted <- function(
         "ribbon is the 95% credible interval"
       ),
       x = "Year",
-      y = "Annual median age (years)",
+      y = "Annual mean age (years)",
       size = "Fish sampled"
     ) +
     theme_classic(base_size = 12)
@@ -4769,18 +4721,26 @@ annual_age_env_fitted_plots <- imap(
   }
 )
 
+# only need one plot to see, but worth it to view other if needed
+annual_age_env_fitted_plots[[1]]
+
+# -----------------------------
+# 5.14 posterior predictive intervals
+# -----------------------------
 
 # posterior predictive intervals
-
 get_annual_predictive_summary <- function(
     model,
     env_variable,
     ndraws = 2000
 ) {
 
-  model_data <- get_model_data(model = model,
-                               env_variable = env_variable)
+  model_data <- get_model_data(
+    model = model,
+    env_variable = env_variable
+  )
 
+  # Posterior predictive draws
   predictive_draws <- posterior_predict(
     model,
     newdata = model_data,
@@ -4788,32 +4748,20 @@ get_annual_predictive_summary <- function(
     ndraws = ndraws
   )
 
+  # Summarize posterior predictions
   predictive_summary <- apply(
     predictive_draws,
     MARGIN = 2,
-    FUN = \(x) {
+    FUN = function(x) {
+
       c(
-        median = median(x),
+        mean = mean(x),
 
-        lower_50 = quantile(
-          x,
-          0.25
-        ),
+        lower_50 = unname(quantile(x, 0.25)),
+        upper_50 = unname(quantile(x, 0.75)),
 
-        upper_50 = quantile(
-          x,
-          0.75
-        ),
-
-        lower_95 = quantile(
-          x,
-          0.025
-        ),
-
-        upper_95 = quantile(
-          x,
-          0.975
-        )
+        lower_95 = unname(quantile(x, 0.025)),
+        upper_95 = unname(quantile(x, 0.975))
       )
     }
   ) %>%
@@ -4824,7 +4772,7 @@ get_annual_predictive_summary <- function(
     model_data %>%
       select(
         Year,
-        median_age,
+        mean_age,
         n_fish
       ),
     predictive_summary
@@ -4833,7 +4781,6 @@ get_annual_predictive_summary <- function(
       covariate = env_variable
     )
 }
-
 
 set.seed(123)
 
@@ -4848,22 +4795,13 @@ annual_age_env_predictive <- imap_dfr(
   }
 )
 
-
 annual_age_env_predictive
 
 # posterior predictions with observations
-
 plot_annual_predictive <- function(
-    model,
-    env_variable,
-    ndraws = 2000
+    predictive_data,
+    env_variable
 ) {
-
-  predictive_data <- get_annual_predictive_summary(
-    model = model,
-    env_variable = env_variable,
-    ndraws = ndraws
-  )
 
   plot_title <- gsub(
     "_annual_z$",
@@ -4890,14 +4828,12 @@ plot_annual_predictive <- function(
       alpha = 0.30
     ) +
     geom_line(
-      aes(
-        y = median
-      ),
+      aes(y = mean),
       linewidth = 0.9
     ) +
     geom_point(
       aes(
-        y = median_age,
+        y = mean_age,
         size = n_fish
       ),
       alpha = 0.70
@@ -4915,30 +4851,35 @@ plot_annual_predictive <- function(
         "light ribbon is the 95% predictive interval"
       ),
       x = "Year",
-      y = "Annual median age (years)",
+      y = "Annual mean age (years)",
       size = "Fish sampled"
     ) +
     theme_classic(base_size = 12)
 }
 
-set.seed(123)
-
-annual_age_env_predictive_plots <- imap(
-  annual_age_env_models,
-  \(model, variable) {
-    plot_annual_predictive(
-      model = model,
-      env_variable = variable,
-      ndraws = 2000
-    )
-  }
-)
+annual_age_env_predictive_plots <- annual_age_env_predictive %>%
+  split(.$covariate) %>%
+  imap(
+    \(data, variable) {
+      plot_annual_predictive(
+        predictive_data = data,
+        env_variable = variable
+      )
+    }
+  )
 
 walk(
   annual_age_env_predictive_plots,
   print
 )
 
+# combine plots
+annual_age_env_predictive_combined <- wrap_plots(
+  annual_age_env_predictive_plots,
+  ncol = 3
+)
+
+annual_age_env_predictive_combined
 
 
 
@@ -4951,14 +4892,13 @@ walk(
 
 
 
-
-
-
-
+# -----------------------------
+# 5.15 compare each model to a matched null model
+# -----------------------------
 
 #####
 #
-# compare each model to a matched null model
+#
 
 fit_annual_age_null_model <- function(
     data,
@@ -4968,7 +4908,7 @@ fit_annual_age_null_model <- function(
 ) {
 
   required_variables <- c(
-    "median_age",
+    "mean_age",
     "year_z",
     "log_n_fish",
     "n_months",
