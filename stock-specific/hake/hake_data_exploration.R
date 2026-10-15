@@ -4896,9 +4896,7 @@ annual_age_env_predictive_combined
 # 5.15 compare each model to a matched null model
 # -----------------------------
 
-#####
-#
-#
+# function to create null model
 
 fit_annual_age_null_model <- function(
     data,
@@ -5016,64 +5014,35 @@ annual_age_env_models <- annual_age_env_models %>%
       add_criterion(
         model,
         criterion = "loo",
-        moment_match = TRUE
+        moment_match = FALSE
       )
     }
   )
 
-annual_age_null_models <- annual_age_null_models %>%
-  map(
-    \(model) {
-      add_criterion(
-        model,
-        criterion = "loo",
-        moment_match = TRUE
-      )
-    }
-  )
+loo_results <- map(
+  annual_age_env_models,
+  \(model) model$criteria$loo
+)
+
+walk(loo_results, print)
 
 
-# compare each env model with its matched null
-#
-# compare_annual_age_models <- function(
-#     env_variable,
-#     env_models,
-#     null_models
-# ) {
-#
-#   comparison <- loo_compare(
-#     null = null_models[
-#       [env_variable]
-#     ]$criteria$loo,
-#
-#     environment = env_models[
-#       [env_variable]
-#     ]$criteria$loo
-#   )
-#
-#   as.data.frame(comparison) %>%
-#     rownames_to_column(
-#       "model"
-#     ) %>%
-#     mutate(
-#       covariate = env_variable,
-#       .before = 1
-#     )
-# }
-#
-#
-# annual_age_loo_comparisons <- map_dfr(
-#   annual_env_variables,
-#   \(env_variable) {
-#     compare_annual_age_models(
-#       env_variable = env_variable,
-#       env_models = annual_age_env_models,
-#       null_models = annual_age_null_models
-#     )
-#   }
-# )
-#
-# annual_age_loo_comparisons
+# pareto-k diagnostics
+loo::pareto_k_table(
+  loo_results[["pdo_annual_same"]]
+)
+
+imap(
+  loo_results,
+  \(loo_result, model_name) {
+    cat("\nModel:", model_name, "\n")
+    print(loo::pareto_k_table(loo_result))
+  }
+)
+
+
+
+
 
 
 
