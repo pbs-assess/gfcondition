@@ -4882,16 +4882,6 @@ annual_age_env_predictive_combined <- wrap_plots(
 annual_age_env_predictive_combined
 
 
-
-
-
-
-
-
-
-
-
-
 # -----------------------------
 # 5.15 compare each model to a matched null model
 # -----------------------------
@@ -4992,8 +4982,6 @@ fit_annual_age_null_model <- function(
   )
 }
 
-
-
 annual_age_null_models <- annual_env_variables %>%
   set_names() %>%
   map(
@@ -5007,7 +4995,6 @@ annual_age_null_models <- annual_env_variables %>%
 
 
 # add LOO to all models
-
 annual_age_env_models <- annual_age_env_models %>%
   map(
     \(model) {
@@ -5039,6 +5026,950 @@ imap(
     print(loo::pareto_k_table(loo_result))
   }
 )
+
+
+
+### HERE NEW STUfF BELOW
+
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+##### -------------------------------------------------------------------- #####
+
+# -----------------------------
+# 6.1 Annual condition and environment
+# -----------------------------
+
+# April-June condition, giving each month equal weight
+annual_condition <- cond_monthly %>%
+  filter(month %in% 4:6) %>%
+  group_by(year) %>%
+  summarise(
+    mean_log_Kn = mean(mean_log_Kn, na.rm = TRUE),
+    n_months = sum(!is.na(month)),
+    n_fish = sum(n_fish),
+    .groups = "drop"
+  ) #%>%
+  # filter(n_months == 3)
+
+# April-June environmental conditions
+# Use existing lagged indices
+annual_environment <- env_wide_rolling %>%
+  filter(month %in% (4:6 + 1)) %>% # add one as we have a lagfor each month
+  group_by(year) %>%
+  summarise(
+    across(
+      matches("^(pdo|npgo|oni|npi|mei)_m_prev[1]$"),
+      ~ if (sum(!is.na(.x)) == 3) {
+        mean(.x)
+      } else {
+        NA_real_
+      }
+    ),
+    .groups = "drop"
+  ) %>%
+  rename_with(~ str_replace(.x, "_m_prev1$", "_annual_same"))
+
+# Join condition, environment, and age
+annual_joint <- annual_condition %>%
+  left_join(annual_environment, by = "year") %>%
+  inner_join(
+    annual_age_env %>%
+      transmute(
+        year = as.integer(Year),
+        mean_age = mean_age
+      ),
+    by = "year"
+  ) %>%
+  arrange(year) %>%
+  mutate(
+    year_z = as.numeric(scale(year)),
+    condition_z = as.numeric(scale(mean_log_Kn))
+  )
+
+glimpse(annual_joint)
+
+
+# -----------------------------
+# 6.2 plot age and condition together
+# -----------------------------
+
+annual_joint %>%
+  select(year, mean_age, mean_log_Kn) %>%
+  pivot_longer(
+    cols = c(mean_age, mean_log_Kn),
+    names_to = "response",
+    values_to = "value"
+  ) %>%
+  group_by(response) %>%
+  mutate(value_z = as.numeric(scale(value))) %>%
+  ungroup() %>%
+  ggplot(aes(year, value_z, colour = response)) +
+  geom_line(alpha = 0.6) +
+  geom_point(size = 1.5) +
+  geom_smooth(
+    method = "loess",
+    se = FALSE,
+    linewidth = 1
+  ) +
+  labs(
+    x = "Year",
+    y = "Standardized value",
+    colour = NULL,
+    title = "Temporal patterns in fish age and body condition"
+  ) +
+  theme_classic()
+
+
+
+
+# -----------------------------
+# 6.3 Model annual condition relate to annual age
+# -----------------------------
+
+# Simple association
+m_age_condition <- brm(
+  mean_age ~ condition_z,
+  data = annual_joint,
+  family = student(),
+  backend = "cmdstanr",
+  chains = 4,
+  iter = 3000,
+  warmup = 1500,
+  seed = 22
+)
+
+# Adjust for linear time trend
+m_age_condition_year <- brm(
+  mean_age ~ condition_z + year_z,
+  data = annual_joint,
+  family = student(),
+  backend = "cmdstanr",
+  chains = 4,
+  iter = 3000,
+  warmup = 1500,
+  seed = 22
+)
+
+fixef(m_age_condition)
+fixef(m_age_condition_year)
+
+
+m_age_condition_smooth <- brm(
+  mean_age ~ condition_z + s(year, k = 8),
+  data = annual_joint,
+  family = student(),
+  backend = "cmdstanr",
+  chains = 4,
+  iter = 3000,
+  warmup = 1500,
+  seed = 22
+)
+
+
+
+# -----------------------------
+# 6.4 Environment effects on body condition
+# -----------------------------
+
+# Select environmental indices
+annual_env_vars <- c(
+  "pdo_annual_same",
+  # "pdo_annual_prior",
+  "npgo_annual_same",
+  # "npgo_annual_prior",
+  "oni_annual_same",
+  # "oni_annual_prior",
+  "npi_annual_same",
+  # "npi_annual_prior",
+  "mei_annual_same"
+  # "mei_annual_prior"
+)
+
+# Fit one model per environmental variable
+annual_condition_models <- set_names(
+  map(annual_env_vars, function(v) {
+
+    dat <- annual_joint %>%
+      select(year, year_z, mean_log_Kn, all_of(v)) %>%
+      drop_na() %>%
+      mutate(env_z = as.numeric(scale(.data[[v]])))
+
+    brm(
+      mean_log_Kn ~ env_z + s(year, k = 8),
+      data = dat,
+      family = student(),
+      backend = "cmdstanr",
+      chains = 4,
+      iter = 3000,
+      warmup = 1500,
+      seed = 22
+    )
+
+  }),
+  annual_env_vars
+)
+
+# Summarize environmental slopes
+annual_condition_results <- imap_dfr(
+  annual_condition_models,
+  function(model, variable) {
+
+    x <- fixef(model)["env_z", ]
+
+    tibble(
+      covariate = variable,
+      estimate = x["Estimate"],
+      lower = x["Q2.5"],
+      upper = x["Q97.5"]
+    )
+  }
+)
+
+annual_condition_results
+
+
+# -----------------------------
+# 6.4.1 Extract posterior slopes
+# -----------------------------
+
+library(posterior)
+library(ggdist)
+library(patchwork)
+
+annual_condition_draws <- purrr::imap_dfr(
+  annual_condition_models,
+  function(model, variable) {
+
+    draws <- posterior::as_draws_matrix(
+      model,
+      variable = "b_env_z"
+    )
+
+    tibble(
+      covariate = variable,
+      beta = as.numeric(draws[, 1])
+    )
+  }
+) %>%
+  mutate(
+    index = toupper(
+      sub("_.*", "", covariate)
+    )
+  )
+
+# Summarize posterior effects
+annual_condition_posterior_summary <- annual_condition_draws %>%
+  group_by(covariate, index) %>%
+  summarise(
+    median_beta = median(beta),
+    lower_95 = quantile(beta, 0.025),
+    upper_95 = quantile(beta, 0.975),
+    prob_positive = mean(beta > 0),
+    prob_negative = mean(beta < 0),
+
+    # Convert log-condition effects to percentage change
+    median_pct = 100 * (exp(median_beta) - 1),
+    lower_pct = 100 * (exp(lower_95) - 1),
+    upper_pct = 100 * (exp(upper_95) - 1),
+
+    .groups = "drop"
+  )
+
+annual_condition_posterior_summary
+
+# -----------------------------
+# 6.4.2 Posterior effect size plot
+# -----------------------------
+
+annual_condition_draws <- annual_condition_draws %>%
+  mutate(
+    pct_change = 100 * (exp(beta) - 1),
+    index = factor(
+      index,
+      levels = c("PDO", "NPGO", "ONI", "NPI", "MEI")
+    )
+  )
+
+p_annual_condition_posterior <- ggplot(
+  annual_condition_draws,
+  aes(
+    x = pct_change,
+    y = index
+  )
+) +
+  stat_halfeye(
+    .width = c(0.50, 0.80, 0.95),
+    point_interval = median_qi,
+    normalize = "groups",
+    slab_colour = "black",
+    slab_linewidth = 0.3
+  ) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dashed",
+    linewidth = 0.6
+  ) +
+  labs(
+    title = "Environmental effects on annual body condition",
+    subtitle = paste(
+      "April-June environmental conditions;",
+      "adjusted for temporal trends"
+    ),
+    x = "Change in body condition (%) per 1-SD increase in index",
+    y = NULL
+  ) +
+  theme_classic(base_size = 12)
+
+p_annual_condition_posterior
+
+
+
+# -----------------------------
+# 6.4.3 Bayesian environmental relationships
+# -----------------------------
+
+get_annual_condition_relationship <- function(
+    model,
+    variable,
+    data = annual_joint,
+    ndraws = 1000
+) {
+
+  # Original data used for this predictor
+  dat <- data %>%
+    select(
+      year,
+      mean_log_Kn,
+      all_of(variable)
+    ) %>%
+    drop_na() %>%
+    mutate(
+      env_z = as.numeric(
+        scale(.data[[variable]])
+      )
+    )
+
+  # Environmental grid
+  env_grid <- seq(
+    min(dat$env_z),
+    max(dat$env_z),
+    length.out = 100
+  )
+
+  # Hold year constant to isolate environmental effect
+  newdata <- tibble(
+    env_z = env_grid,
+    year = median(dat$year)
+  )
+
+  # Posterior expected values
+  epred <- posterior_epred(
+    model,
+    newdata = newdata,
+    ndraws = ndraws,
+    re_formula = NA
+  )
+
+  # Summarize expected values
+  pred_summary <- tibble(
+    env_z = env_grid,
+    median = apply(epred, 2, median),
+    lower_95 = apply(
+      epred, 2,
+      \(x) unname(quantile(x, 0.025))
+    ),
+    upper_95 = apply(
+      epred, 2,
+      \(x) unname(quantile(x, 0.975))
+    )
+  )
+
+  # Return both observed data and predictions
+  list(
+    observed = dat %>%
+      mutate(covariate = variable),
+
+    predicted = pred_summary %>%
+      mutate(covariate = variable)
+  )
+}
+
+# Run for all environmental variables
+annual_condition_relationships <- imap(
+  annual_condition_models,
+  ~ get_annual_condition_relationship(
+    model = .x,
+    variable = .y
+  )
+)
+
+# Combine observations
+annual_condition_observed <- map_dfr(
+  annual_condition_relationships,
+  "observed"
+)
+
+# Combine predictions
+annual_condition_predicted <- map_dfr(
+  annual_condition_relationships,
+  "predicted"
+)
+
+
+# -----------------------------
+# 6.4.4 Plot all environmental relationships
+# -----------------------------
+
+p_annual_condition_relationships <- ggplot() +
+
+  # 95% credible interval
+  geom_ribbon(
+    data = annual_condition_predicted,
+    aes(
+      x = env_z,
+      ymin = lower_95,
+      ymax = upper_95
+    ),
+    alpha = 0.2
+  ) +
+
+  # Median fitted relationship
+  geom_line(
+    data = annual_condition_predicted,
+    aes(
+      x = env_z,
+      y = median
+    ),
+    linewidth = 1
+  ) +
+
+  # Observed annual values
+  geom_point(
+    data = annual_condition_observed,
+    aes(
+      x = env_z,
+      y = mean_log_Kn
+    ),
+    alpha = 0.5,
+    size = 1.8
+  ) +
+
+  facet_wrap(
+    ~ covariate,
+    scales = "free_x",
+    ncol = 3
+  ) +
+
+  labs(
+    title = "Annual body condition and environmental indices",
+    subtitle = paste(
+      "Bayesian fitted relationships adjusted",
+      "for nonlinear temporal trends"
+    ),
+    x = "Standardized environmental index",
+    y = "Annual mean log condition"
+  ) +
+
+  theme_classic(base_size = 12)
+
+p_annual_condition_relationships
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# -----------------------------
+# 6.5 Joint model comparison - just PDO
+# -----------------------------
+
+dat_joint_pdo <- annual_joint %>%
+  select(
+    year,
+    mean_age,
+    condition_z,
+    pdo_m_prev3
+  ) %>%
+  drop_na() %>%
+  mutate(
+    pdo_z = as.numeric(scale(pdo_m_prev3))
+  )
+
+# Null
+m0 <- brm(
+  mean_age ~ s(year, k = 8),
+  data = dat_joint_pdo,
+  family = student(),
+  backend = "cmdstanr"
+)
+
+# Environment
+m1 <- brm(
+  mean_age ~ s(year, k = 8) + pdo_z,
+  data = dat_joint_pdo,
+  family = student(),
+  backend = "cmdstanr"
+)
+
+# Condition
+m2 <- brm(
+  mean_age ~ s(year, k = 8) + condition_z,
+  data = dat_joint_pdo,
+  family = student(),
+  backend = "cmdstanr"
+)
+
+# Combined
+m3 <- brm(
+  mean_age ~ s(year, k = 8) +
+    pdo_z + condition_z,
+  data = dat_joint_pdo,
+  family = student(),
+  backend = "cmdstanr"
+)
+
+# LOO comparison
+loo_comparison <- loo_compare(
+  loo(m0),
+  loo(m1),
+  loo(m2),
+  loo(m3)
+)
+
+loo_comparison
+
+# Examine posterior effects
+fixef(m3)
+
+
+### STEPPING THROUGH ALL VARIABLES
+# -----------------------------
+# 6.6.1 Environmental variables
+# -----------------------------
+
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(tibble)
+library(brms)
+library(posterior)
+library(ggplot2)
+
+annual_env_vars <- c(
+  # "pdo_m_prev1",
+  # "npgo_m_prev1",
+  # "oni_m_prev1",
+  # "npi_m_prev1",
+  # "mei_m_prev1",
+  #
+  # "pdo_m_prev3",
+  # "npgo_m_prev3",
+  # "oni_m_prev3",
+  # "npi_m_prev3",
+  # "mei_m_prev3",
+
+  "pdo_m_prev6",
+  "npgo_m_prev6",
+  "oni_m_prev6",
+  "npi_m_prev6",
+  "mei_m_prev6"
+)
+
+# Check availability
+setdiff(annual_env_vars, names(annual_joint))
+
+
+
+
+# -----------------------------
+# 6.6.2 Model fitting function
+# -----------------------------
+
+fit_annual_joint_models <- function(
+    variable,
+    data = annual_joint
+) {
+
+  # Prepare data
+  dat <- data %>%
+    select(
+      year,
+      mean_age,
+      condition_z,
+      all_of(variable)
+    ) %>%
+    drop_na() %>%
+    mutate(
+      env_z = as.numeric(
+        scale(.data[[variable]])
+      )
+    )
+
+  if (nrow(dat) < 15) {
+    stop("Too few observations for: ", variable)
+  }
+
+  # Define formulas
+  formulas <- list(
+    null = bf(
+      mean_age ~ s(year, k = 8)
+    ),
+
+    environment = bf(
+      mean_age ~ s(year, k = 8) + env_z
+    ),
+
+    condition = bf(
+      mean_age ~ s(year, k = 8) + condition_z
+    ),
+
+    combined = bf(
+      mean_age ~ s(year, k = 8) +
+        env_z + condition_z
+    )
+  )
+
+  # Fit models
+  models <- map(
+    formulas,
+    function(form) {
+
+      brm(
+        formula = form,
+        data = dat,
+        family = student(),
+
+        backend = "cmdstanr",
+
+        chains = 4,
+        cores = 4,
+        iter = 3000,
+        warmup = 1500,
+
+        seed = 22,
+        refresh = 0
+      )
+    }
+  )
+
+  list(
+    variable = variable,
+    data = dat,
+    models = models
+  )
+}
+
+
+# -----------------------------
+# 6.6.3 Fit all environmental models
+# -----------------------------
+
+annual_joint_models <- annual_env_vars %>%
+  set_names() %>%
+  map(
+    ~ fit_annual_joint_models(
+      variable = .x,
+      data = annual_joint
+    )
+  )
+
+# Save models to avoid refitting
+saveRDS(
+  annual_joint_models,
+  "annual_joint_models.rds"
+)
+
+
+
+
+# -----------------------------
+# 6.6.4 Extract posterior effects
+# -----------------------------
+
+annual_joint_posterior <- imap_dfr(
+  annual_joint_models,
+  function(result, variable) {
+
+    model <- result$models$combined
+
+    draws <- as_draws_df(model)
+
+    tibble(
+      covariate = variable,
+
+      env_beta = draws$b_env_z,
+
+      condition_beta = draws$b_condition_z
+    )
+  }
+)
+
+# Summarize posterior distributions
+annual_joint_summary <- annual_joint_posterior %>%
+  group_by(covariate) %>%
+  summarise(
+    env_mean = mean(env_beta),
+    env_lower = quantile(env_beta, 0.025),
+    env_upper = quantile(env_beta, 0.975),
+    prob_env_positive = mean(env_beta > 0),
+
+    condition_mean = mean(condition_beta),
+    condition_lower = quantile(condition_beta, 0.025),
+    condition_upper = quantile(condition_beta, 0.975),
+    prob_condition_positive = mean(condition_beta > 0),
+
+    .groups = "drop"
+  )
+
+annual_joint_summary
+
+
+# -----------------------------
+# 6.6.5 Posterior coefficient plot
+# -----------------------------
+
+annual_joint_plot_data <- annual_joint_posterior %>%
+  pivot_longer(
+    cols = c(env_beta, condition_beta),
+    names_to = "predictor",
+    values_to = "beta"
+  ) %>%
+  mutate(
+    predictor = recode(
+      predictor,
+      env_beta = "Environment",
+      condition_beta = "Body condition"
+    ),
+
+    index = toupper(
+      sub("_.*", "", covariate)
+    ),
+
+    exposure_window = case_when(
+      grepl("prev1$", covariate) ~ "Previous month",
+      grepl("prev3$", covariate) ~ "Previous 3 months",
+      grepl("prev6$", covariate) ~ "Previous 6 months"
+    )
+  )
+
+ggplot(
+  annual_joint_plot_data,
+  aes(
+    x = beta,
+    y = exposure_window
+  )
+) +
+  ggdist::stat_halfeye(
+    .width = c(0.50, 0.80, 0.95),
+    point_interval = "median_qi"
+  ) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dashed"
+  ) +
+  facet_grid(
+    predictor ~ index,
+    scales = "free_x"
+  ) +
+  labs(
+    title = "Environmental and condition associations with annual mean age",
+    subtitle = "Posterior coefficients from combined models",
+    x = "Change in annual mean age (years)",
+    y = "Environmental exposure window"
+  ) +
+  theme_classic()
+
+
+
+# -----------------------------
+# 6.6.6 Calculate LOO
+# -----------------------------
+
+annual_joint_loo <- imap(
+  annual_joint_models,
+  function(result, variable) {
+
+    loo_results <- map(
+      result$models,
+      ~ loo(
+        .x,
+        moment_match = FALSE
+      )
+    )
+
+    comparison <- do.call(
+      loo_compare,
+      loo_results
+    )
+
+    list(
+      variable = variable,
+      loo = loo_results,
+      comparison = comparison
+    )
+  }
+)
+
+
+condition_added_value <- imap_dfr(
+  annual_joint_loo,
+  function(result, variable) {
+
+    comparison <- loo_compare(
+      result$loo$combined,
+      result$loo$environment
+    )
+
+    comparison <- as.data.frame(comparison)
+
+    # Difference in ELPD: combined minus environment
+    elpd_combined <- result$loo$combined$estimates[
+      "elpd_loo", "Estimate"
+    ]
+
+    elpd_environment <- result$loo$environment$estimates[
+      "elpd_loo", "Estimate"
+    ]
+
+    tibble(
+      covariate = variable,
+      elpd_gain_condition =
+        elpd_combined - elpd_environment,
+
+      se_diff = comparison[
+        "environment",
+        "se_diff"
+      ]
+    )
+  }
+)
+
+condition_added_value
+
+# -----------------------------
+# 6.6.7 Summarize model comparison
+# -----------------------------
+annual_joint_loo_summary <- imap_dfr(
+  annual_joint_loo,
+  function(result, variable) {
+
+    comparison <- as.data.frame(
+      result$comparison
+    )
+
+    comparison %>%
+      rownames_to_column("model") %>%
+      mutate(
+        covariate = variable
+      ) %>%
+      select(
+        covariate,
+        model,
+        elpd_diff,
+        se_diff
+      )
+  }
+)
+
+annual_joint_loo_summary
+
+
+# plot LOO comparisons
+ggplot(
+  annual_joint_loo_summary,
+  aes(
+    x = elpd_diff,
+    y = reorder(covariate, elpd_diff),
+    colour = model
+  )
+) +
+  geom_point(
+    position = position_dodge(width = 0.6),
+    size = 2
+  ) +
+  geom_errorbarh(
+    aes(
+      xmin = elpd_diff - se_diff,
+      xmax = elpd_diff + se_diff
+    ),
+    position = position_dodge(width = 0.6),
+    height = 0
+  ) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Comparison of annual mean age models",
+    subtitle = "ELPD differences relative to the best model for each index",
+    x = "ELPD difference",
+    y = "Environmental variable",
+    colour = "Model"
+  ) +
+  theme_classic()
+
+
+# -----------------------------
+# 6.6.8 Condition add value to analysis
+# -----------------------------
+
+condition_added_value <- imap_dfr(
+  annual_joint_loo,
+  function(result, variable) {
+
+    comparison <- loo_compare(
+      result$loo$combined,
+      result$loo$environment
+    )
+
+    comparison <- as.data.frame(comparison)
+
+    # Difference in ELPD: combined minus environment
+    elpd_combined <- result$loo$combined$estimates[
+      "elpd_loo", "Estimate"
+    ]
+
+    elpd_environment <- result$loo$environment$estimates[
+      "elpd_loo", "Estimate"
+    ]
+
+    tibble(
+      covariate = variable,
+      elpd_gain_condition =
+        elpd_combined - elpd_environment,
+
+      se_diff = comparison[
+        "environment",
+        "se_diff"
+      ]
+    )
+  }
+)
+
+condition_added_value
+
+
+
+
+
 
 
 
