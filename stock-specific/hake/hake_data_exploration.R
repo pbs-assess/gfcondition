@@ -5041,6 +5041,8 @@ imap(
 # 6.1 Annual condition and environment
 # -----------------------------
 
+
+##### OPTION 1
 # April-June condition, giving each month equal weight
 annual_condition <- cond_monthly %>%
   filter(month %in% 4:6) %>%
@@ -5070,6 +5072,40 @@ annual_environment <- env_wide_rolling %>%
     .groups = "drop"
   ) %>%
   rename_with(~ str_replace(.x, "_m_prev1$", "_annual_same"))
+
+
+##### OPTION 2 -
+# Aug-Oct condition, giving each month equal weight
+annual_condition <- cond_monthly %>%
+  filter(month %in% 8:10) %>%
+  group_by(year) %>%
+  summarise(
+    mean_log_Kn = mean(mean_log_Kn, na.rm = TRUE),
+    n_months = sum(!is.na(month)),
+    n_fish = sum(n_fish),
+    .groups = "drop"
+  ) #%>%
+# filter(n_months == 3)
+
+# April-June environmental conditions
+# Use existing lagged indices
+annual_environment <- env_wide_rolling %>%
+  filter(month %in% (8:10 + 1)) %>% # add one as we have a lagfor each month
+  group_by(year) %>%
+  summarise(
+    across(
+      matches("^(pdo|npgo|oni|npi|mei)_m_prev[1]$"),
+      ~ if (sum(!is.na(.x)) == 3) {
+        mean(.x)
+      } else {
+        NA_real_
+      }
+    ),
+    .groups = "drop"
+  ) %>%
+  rename_with(~ str_replace(.x, "_m_prev1$", "_annual_same"))
+
+
 
 # Join condition, environment, and age
 annual_joint <- annual_condition %>%
@@ -5198,6 +5234,7 @@ annual_condition_models <- set_names(
 
     brm(
       mean_log_Kn ~ env_z + s(year, k = 8),
+      # mean_log_Kn ~ env_z,
       data = dat,
       family = student(),
       backend = "cmdstanr",
@@ -5477,14 +5514,73 @@ p_annual_condition_relationships <- ggplot() +
 p_annual_condition_relationships
 
 
+# -----------------------------
+# 6.4.5 Combine plots
+# -----------------------------
+
+p_annual_condition_combined <-
+  p_annual_condition_relationships /
+  p_annual_condition_posterior +
+  plot_layout(heights = c(2, 1))
+
+p_annual_condition_combined
+
+# ggsave(
+#   filename = "annual_condition_environment_effects.png",
+#   plot = p_annual_condition_combined,
+#   width = 14,
+#   height = 12,
+#   dpi = 300
+# )
 
 
+# -----------------------------
+# 6.4.6 Forest plots
+# -----------------------------
+
+p_annual_condition_forest <- annual_condition_results %>%
+  mutate(
+    index = toupper(
+      sub("_.*", "", covariate)
+    )
+  ) %>%
+  ggplot(
+    aes(
+      x = estimate,
+      y = reorder(index, estimate)
+    )
+  ) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dashed"
+  ) +
+  geom_errorbarh(
+    aes(
+      xmin = lower,
+      xmax = upper
+    ),
+    height = 0.15
+  ) +
+  geom_point(
+    size = 2.5
+  ) +
+  labs(
+    title = "Environmental effects on annual body condition",
+    subtitle = "Posterior mean and 95% credible intervals",
+    x = "Change in mean log condition per 1-SD increase",
+    y = NULL
+  ) +
+  theme_classic()
+
+p_annual_condition_forest
 
 
+p_annual_condition_combined <-
+  p_annual_condition_relationships /
+  p_annual_condition_forest +
+  plot_layout(heights = c(2, 1))
 
-
-
-
+p_annual_condition_combined
 
 
 
