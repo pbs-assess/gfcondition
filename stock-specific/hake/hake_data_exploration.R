@@ -320,7 +320,6 @@ m_lw6.1 <- glmmTMB(
   )
 )
 
-## USE THIS
 # simplest
 m_lw7.1 <- glmmTMB(
   log_weight ~ log_length * Sex
@@ -332,13 +331,26 @@ m_lw7.1 <- glmmTMB(
   )
 )
 
+## USE THIS
+# Month-specific intercepts and slopes
+# Sex-specific slopes are retained
+m_lw_month8.1 <- glmmTMB(
+  log_weight ~ log_length * Sex +
+    log_length * Month,
+  data = lwa,
+  family = gaussian(),
+  control = glmmTMBControl(
+    optCtrl = list(iter.max = 1e4, eval.max = 1e4)
+  )
+)
+
 # comparing models
 AIC(m_lw1.1, m_lw1.2, m_lw2.1, m_lw2.2,
     m_lw3.1, m_lw3.2, m_lw4.1, m_lw4.2,
-    m_lw5.1, m_lw5.2, m_lw6.1, m_lw7.1
-    )
+    m_lw5.1, m_lw5.2, m_lw6.1, m_lw7.1,
+    m_lw_month8.1)
 
-anova(m_lw1.1, m_lw2.1, m_lw3.1, m_lw5.1, m_lw7.1)
+anova(m_lw1.1, m_lw2.1, m_lw3.1, m_lw5.1, m_lw7.1, m_lw_month8.1)
 
 rm(m_lw1.1,m_lw1.2,m_lw2.1,m_lw2.2,m_lw3.1,m_lw3.2,m_lw4.1,m_lw4.2,m_lw5.1,m_lw5.2,m_lw6.1)
 gc()
@@ -348,7 +360,7 @@ gc()
 
 # selected model - simple one for lw model
 m_lw_selected <- m_lw7.1
-
+m_lw_selected <- m_lw_month8.1
 
 # -----------------------------
 # 1.4 Predict expected weight and calculate Le Cren's condition
@@ -479,6 +491,91 @@ cond_annual <- lwa_cond %>%
     .groups = "drop"
   )
 
+# mean monthly condition plot
+cond_monthly_plot <- cond_monthly %>%
+  mutate(date = make_date(year, month, 1))
+
+p_cond_monthly <- ggplot(cond_monthly_plot,
+             aes(x = date, y = mean_Kn)) +
+  geom_hline(yintercept = 1, linetype = "dashed",
+             colour = "grey50") +
+  geom_point(alpha = 0.4, size = 1.5,
+             colour = "steelblue") +
+  geom_smooth(
+    method = "loess",
+    span = 0.3,
+    se = TRUE,
+    colour = "black",
+    fill = "grey70",
+    linewidth = 1
+  ) +
+  scale_x_date(date_breaks = "5 years",
+               date_labels = "%Y") +
+  labs(
+    x = "Year",
+    y = "Mean relative condition (Kn)",
+    title = "Monthly mean body condition over time"
+  ) +
+  theme_classic(base_size = 13)
+
+p_cond_monthly
+
+# mean by year, across months
+p_cond_monthly2 <- cond_monthly %>%
+  mutate(
+    month = factor(
+      month,
+      levels = 1:12,
+      labels = month.abb
+    )
+  ) %>%
+  ggplot(aes(x = month, y = mean_Kn)) +
+  geom_hline(yintercept = 1, linetype = "dashed",
+             colour = "grey50") +
+  geom_boxplot(
+    fill = "steelblue",
+    alpha = 0.5,
+    outlier.alpha = 0.3
+  ) +
+  geom_jitter(
+    width = 0.15,
+    alpha = 0.3,
+    size = 1
+  ) +
+  labs(
+    x = "Month",
+    y = "Mean relative condition (Kn)",
+    title = "Seasonal variation in body condition"
+  ) +
+  theme_classic(base_size = 13)
+
+p_cond_monthly2
+
+# separating years and months
+p_cond_monthly3 <- cond_monthly %>%
+  mutate(month = factor(
+    month,
+    levels = 1:12,
+    labels = month.abb
+  )) %>%
+  ggplot(aes(x = year, y = mean_Kn)) +
+  geom_hline(yintercept = 1, linetype = "dashed",
+             colour = "grey60") +
+  geom_point(alpha = 0.5, size = 1) +
+  geom_smooth(
+    method = "loess",
+    se = TRUE,
+    colour = "steelblue"
+  ) +
+  facet_wrap(~ month, scales = "free", ncol = 3) +
+  labs(
+    x = "Year",
+    y = "Mean relative condition (Kn)",
+    title = "Temporal trends in body condition by month"
+  ) +
+  theme_classic(base_size = 12)
+
+p_cond_monthly3
 
 # -----------------------------
 # 1.6 Add environmental covariates from pacea
@@ -5087,7 +5184,7 @@ annual_condition <- cond_monthly %>%
   ) #%>%
 # filter(n_months == 3)
 
-# April-June environmental conditions
+# Aug-Oct environmental conditions
 # Use existing lagged indices
 annual_environment <- env_wide_rolling %>%
   filter(month %in% (8:10 + 1)) %>% # add one as we have a lagfor each month
@@ -5496,7 +5593,12 @@ p_annual_condition_relationships <- ggplot() +
   facet_wrap(
     ~ covariate,
     scales = "free_x",
-    ncol = 3
+    ncol = 3,
+    labeller = labeller(
+      covariate = function(x) {
+        toupper(sub("_annual_same$", "", x))
+      }
+    )
   ) +
 
   labs(
